@@ -162,13 +162,35 @@ final class MySlitherCanvas extends JPanel {
                     g.setColor(snake == model.snake ? OWN_SNAKE_BODY_COLOR : SNAKE_BODY_COLOR);
                     g.setStroke(new BasicStroke((float) thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-                    Path2D.Double snakePath = new Path2D.Double();
+                    double totalLength = 0;
+                    double lastX = 0, lastY = 0;
+                    for (SnakeBodyPart bodyPart : snake.body) {
+                        if (bodyPart != snake.body.getFirst()) {
+                            totalLength += Math.sqrt((bodyPart.x - lastX) * (bodyPart.x - lastX) + (bodyPart.y - lastY) * (bodyPart.y - lastY));
+                        }
+                        if (bodyPart != snake.body.getLast()) {
+                            lastX = bodyPart.x;
+                            lastY = bodyPart.y;
+                        }
+                    }
 
+                    Path2D.Double snakePath = new Path2D.Double();
                     snakePath.moveTo(snake.x, snake.y);
 
-                    snake.body.forEach((bodyPart) -> {
+                    lastX = snake.x;
+                    lastY = snake.y;
+
+                    for (SnakeBodyPart bodyPart : snake.body) {
+                        double partLength = Math.sqrt((bodyPart.x - lastX) * (bodyPart.x - lastX) + (bodyPart.y - lastY) * (bodyPart.y - lastY));
+                        if (partLength > totalLength) {
+                            snakePath.lineTo(lastX + (totalLength / partLength) * (bodyPart.x - lastX), lastY + (totalLength / partLength) * (bodyPart.y - lastY));
+                            break;
+                        }
                         snakePath.lineTo(bodyPart.x, bodyPart.y);
-                    });
+                        totalLength -= partLength;
+                        lastX = bodyPart.x;
+                        lastY = bodyPart.y;
+                    }
 
                     g.draw(snakePath);
                 }
