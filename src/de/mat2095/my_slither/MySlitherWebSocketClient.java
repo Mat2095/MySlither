@@ -256,7 +256,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             }
         }
 
-        synchronized (model) {
+        synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
             if (newDir != -1) {
                 snake.dir = newDir;
@@ -279,17 +279,19 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             return;
         }
         int snakeID = (data[3] << 8) | data[4];
-        Snake snake = model.getSnake(snakeID);
-        snake.fam = ((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0;
+        synchronized (view.modelLock) {
+            Snake snake = model.getSnake(snakeID);
+            snake.fam = ((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0;
+        }
     }
 
     private void processRemoveSnakePart(int[] data) {
         if (data.length != 5 && data.length != 8) {
             view.log("remove snake part wrong length!");
         }
-        int id = (data[3] << 8) | data[4];
-        synchronized (model) {
-            Snake snake = model.getSnake(id);
+        int snakeID = (data[3] << 8) | data[4];
+        synchronized (view.modelLock) {
+            Snake snake = model.getSnake(snakeID);
             if (data.length == 8) {
                 snake.fam = ((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0;
             }
@@ -309,7 +311,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
 
         int snakeID = (data[3] << 8) | data[4];
 
-        synchronized (model) {
+        synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
             SnakeBodyPart head = snake.body.getFirst();
 
@@ -531,41 +533,43 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         int x = 1 + 3 * ((data[5] << 8) | data[6]);
         int y = 1 + 3 * ((data[7] << 8) | data[8]);
 
-        Prey prey = model.getPrey(id);
-        prey.x = x;
-        prey.y = y;
+        synchronized (view.modelLock) {
+            Prey prey = model.getPrey(id);
+            prey.x = x;
+            prey.y = y;
 
-        switch (data.length) {
-            case 11:
-                prey.sp = ((data[9] << 8) | data[10]) / 1000.0;
-                break;
-            case 12:
-                prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
-                break;
-            case 13:
-                prey.dir = data[9] - 48;
-                prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                break;
-            case 14:
-                prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
-                prey.sp = ((data[12] << 8) | data[13]) / 1000.0;
-                break;
-            case 15:
-                prey.dir = data[9] - 48;
-                prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                prey.sp = ((data[13] << 8) | data[14]) / 1000;
-                break;
-            case 16:
-                prey.dir = data[9] - 48;
-                prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
-                break;
-            case 18:
-                prey.dir = data[9] - 48;
-                prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
-                prey.sp = ((data[16] << 8) | data[17]) / 1000.0;
-                break;
+            switch (data.length) {
+                case 11:
+                    prey.sp = ((data[9] << 8) | data[10]) / 1000.0;
+                    break;
+                case 12:
+                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
+                    break;
+                case 13:
+                    prey.dir = data[9] - 48;
+                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    break;
+                case 14:
+                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
+                    prey.sp = ((data[12] << 8) | data[13]) / 1000.0;
+                    break;
+                case 15:
+                    prey.dir = data[9] - 48;
+                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    prey.sp = ((data[13] << 8) | data[14]) / 1000;
+                    break;
+                case 16:
+                    prey.dir = data[9] - 48;
+                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
+                    break;
+                case 18:
+                    prey.dir = data[9] - 48;
+                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
+                    prey.sp = ((data[16] << 8) | data[17]) / 1000.0;
+                    break;
+            }
         }
     }
 

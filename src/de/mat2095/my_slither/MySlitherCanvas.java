@@ -38,11 +38,14 @@ final class MySlitherCanvas extends JPanel {
     private static final Color MAP_POSITION_COLOR = new Color(0xE09E2927, true);
 
     private boolean[] map;
+    private final MySlitherJFrame view;
     private MySlitherModel model;
     private int zoom = 12;
 
-    public MySlitherCanvas() {
+    public MySlitherCanvas(MySlitherJFrame view) {
         super();
+        this.view = view;
+
         setBackground(BACKGROUND_COLOR);
         setForeground(FOREGROUND_COLOR);
 
@@ -88,7 +91,9 @@ final class MySlitherCanvas extends JPanel {
     }
 
     void setModel(MySlitherModel model) {
-        this.model = model;
+        synchronized (view.modelLock) {
+            this.model = model;
+        }
     }
 
     void updateModel() {
@@ -116,7 +121,7 @@ final class MySlitherCanvas extends JPanel {
         int h = getHeight();
         int m = Math.min(w, h);
 
-        synchronized (model) {
+        synchronized (view.modelLock) {
             AffineTransform oldTransform = g.getTransform();
             if (zoom == 0 || model.snake == null) {
                 g.translate((w - m) / 2, (h - m) / 2);
@@ -208,9 +213,10 @@ final class MySlitherCanvas extends JPanel {
 
             g.setColor(MAP_COLOR);
             g.drawOval(w - 80, h - 80, 79, 79);
-            if (map != null) {
-                for (int i = 0; i < map.length; i++) {
-                    if (map[i]) {
+            boolean[] currentMap = map;
+            if (currentMap != null) {
+                for (int i = 0; i < currentMap.length; i++) {
+                    if (currentMap[i]) {
                         g.fillRect((i % 80) + w - 80, (i / 80) + h - 80, 1, 1);
                     }
                 }

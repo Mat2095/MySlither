@@ -92,6 +92,7 @@ final class MySlitherJFrame extends JFrame {
     private final long startTime;
     private boolean running;
     private MySlitherWebSocketClient client;
+    public final Object modelLock = new Object();
 
     public MySlitherJFrame() {
         super("MySlither");
@@ -216,7 +217,7 @@ final class MySlitherJFrame extends JFrame {
             }
         });
 
-        canvas = new MySlitherCanvas();
+        canvas = new MySlitherCanvas(this);
 
         highscoreList = new JTable(10, 2);
         highscoreList.setEnabled(false);
