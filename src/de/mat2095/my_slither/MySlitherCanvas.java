@@ -2,6 +2,7 @@ package de.mat2095.my_slither;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RadialGradientPaint;
@@ -36,6 +37,8 @@ final class MySlitherCanvas extends JPanel {
     private static final Color OWN_SNAKE_BODY_COLOR = new Color(0xA5C261);
     private static final Color MAP_COLOR = new Color(0xA0A9B7C6, true);
     private static final Color MAP_POSITION_COLOR = new Color(0xE09E2927, true);
+    private static final Color NAME_SHADOW_COLOR = new Color(0xC02B2B2B, true);
+    private static final Font NAME_FONT = Font.decode("Arial-BOLD");
 
     private boolean[] map;
     private final MySlitherJFrame view;
@@ -123,12 +126,14 @@ final class MySlitherCanvas extends JPanel {
 
         synchronized (view.modelLock) {
             AffineTransform oldTransform = g.getTransform();
+            double scale;
             if (zoom == 0 || model.snake == null) {
                 g.translate((w - m) / 2, (h - m) / 2);
-                g.scale(1d * m / (model.gameRadius * 2), 1d * m / (model.gameRadius * 2));
+                scale = 1d * m / (model.gameRadius * 2);
+                g.scale(scale, scale);
             } else {
                 g.translate(w / 2, h / 2);
-                double scale = Math.pow(1.25, zoom + 1) * m / (model.gameRadius * 2);
+                scale = Math.pow(1.25, zoom + 1) * m / (model.gameRadius * 2);
                 g.scale(scale, scale);
                 g.translate(-model.snake.x, -model.snake.y);
             }
@@ -154,13 +159,14 @@ final class MySlitherCanvas extends JPanel {
             });
 
             model.preys.values().forEach(prey -> {
-                g.setPaint(new RadialGradientPaint((float) (prey.x - 0.5 / g.getTransform().getScaleX()), (float) (prey.y - 0.5 / g.getTransform().getScaleY()), (float) prey.radius, PREY_HALO_FRACTIONS, PREY_HALO_COLORS));
+                g.setPaint(new RadialGradientPaint((float) (prey.x - 0.5 / scale), (float) (prey.y - 0.5 / scale), (float) prey.radius, PREY_HALO_FRACTIONS, PREY_HALO_COLORS));
                 g.fillRect((int) Math.floor(prey.x - prey.radius - 1), (int) Math.floor(prey.y - prey.radius - 1), (int) (prey.radius * 2 + 2), (int) (prey.radius * 2 + 2));
                 g.setColor(PREY_COLOR);
                 g.fill(new Ellipse2D.Double(prey.x - prey.radius / 2, prey.y - prey.radius / 2, prey.radius, prey.radius));
             });
 
             oldStroke = g.getStroke();
+            g.setFont(NAME_FONT.deriveFont((float) (18 / Math.pow(scale, 0.75))));
             model.snakes.values().forEach(snake -> {
                 double thickness = 16 + snake.body.size() / 4.0;
                 if (snake.body.size() >= 2) {
@@ -201,11 +207,21 @@ final class MySlitherCanvas extends JPanel {
                 }
 
                 if (snake.isBoosting()) {
-                    g.setPaint(new RadialGradientPaint((float) (snake.x - 0.5 / g.getTransform().getScaleX()), (float) (snake.y - 0.5 / g.getTransform().getScaleY()), (float) (thickness * 4 / 3), SNAKE_HALO_FRACTIONS, snake == model.snake ? OWN_SNAKE_HALO_COLORS : SNAKE_HALO_COLORS));
+                    g.setPaint(new RadialGradientPaint((float) (snake.x - 0.5 / scale), (float) (snake.y - 0.5 / scale), (float) (thickness * 4 / 3), SNAKE_HALO_FRACTIONS, snake == model.snake ? OWN_SNAKE_HALO_COLORS : SNAKE_HALO_COLORS));
                     g.fillRect((int) Math.round(snake.x - thickness * 3 / 2 - 1), (int) Math.round(snake.y - thickness * 3 / 2 - 1), (int) (thickness * 3 + 2), (int) (thickness * 3 + 2));
                 }
                 g.setColor(snake == model.snake ? OWN_SNAKE_COLOR : SNAKE_COLOR);
                 g.fill(new Ellipse2D.Double(snake.x - thickness * 2 / 3, snake.y - thickness * 2 / 3, thickness * 4 / 3, thickness * 4 / 3));
+
+                int length = model.getSnakeLength(snake.body.size(), snake.fam);
+
+                g.setColor(NAME_SHADOW_COLOR);
+                g.drawString(snake.name, (float) (snake.x - g.getFontMetrics().stringWidth(snake.name) / 2.0 + g.getFontMetrics().getHeight() / 12.0), (float) (snake.y - thickness * 2 / 3 - g.getFontMetrics().getHeight() + g.getFontMetrics().getHeight() / 12.0));
+                g.drawString("" + length, (float) (snake.x - g.getFontMetrics().stringWidth("" + length) / 2.0 + g.getFontMetrics().getHeight() / 12.0), (float) (snake.y - thickness * 2 / 3 + g.getFontMetrics().getHeight() / 12.0));
+
+                g.setColor(FOREGROUND_COLOR);
+                g.drawString(snake.name, (float) (snake.x - g.getFontMetrics().stringWidth(snake.name) / 2.0), (float) (snake.y - thickness * 2 / 3 - g.getFontMetrics().getHeight()));
+                g.drawString("" + length, (float) (snake.x - g.getFontMetrics().stringWidth("" + length) / 2.0), (float) (snake.y - thickness * 2 / 3));
             });
             g.setStroke(oldStroke);
 
