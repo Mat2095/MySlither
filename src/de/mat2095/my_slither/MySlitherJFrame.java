@@ -91,6 +91,8 @@ final class MySlitherJFrame extends JFrame {
 
     private final long startTime;
     private boolean running;
+    private Status status;
+    private URI[] serverList;
     private MySlitherWebSocketClient client;
     public final Object modelLock = new Object();
 
@@ -100,8 +102,8 @@ final class MySlitherJFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (client != null) {
-                    client.close();
+                if (status == Status.CONNECTING || status == Status.CONNECTED) {
+                    disconnect();
                 }
                 running = false;
             }
@@ -113,7 +115,6 @@ final class MySlitherJFrame extends JFrame {
         JPanel settings = new JPanel(new GridBagLayout());
 
         server = new JTextField(16);
-        server.setEnabled(false);
 
         name = new JTextField(16);
 
@@ -122,31 +123,21 @@ final class MySlitherJFrame extends JFrame {
 
         useRandomServer = new JCheckBox("use random server", true);
         useRandomServer.addActionListener(a -> {
-            if (useRandomServer.isSelected()) {
-                server.setEnabled(false);
-            } else {
-                server.setEnabled(true);
-            }
+            setStatus(null);
         });
 
-        connect = new JToggleButton("connect");
-        connect.setFocusPainted(false);
+        connect = new JToggleButton();
         connect.addActionListener(a -> {
-            if (connect.isSelected()) {
-                connect.setText("disconnect");
-                server.setEnabled(false);
-                useRandomServer.setEnabled(false);
-                name.setEnabled(false);
-                snake.setEnabled(false);
-                connect();
-            } else {
-                connect.setEnabled(false);
-                connect.setText("connect");
-                server.setEnabled(!useRandomServer.isSelected());
-                useRandomServer.setEnabled(true);
-                name.setEnabled(true);
-                snake.setEnabled(true);
-                disconnect();
+            switch (status) {
+                case DISCONNECTED:
+                    connect();
+                    break;
+                case CONNECTING:
+                case CONNECTED:
+                    disconnect();
+                    break;
+                case DISCONNECTING:
+                    break;
             }
         });
 
@@ -254,16 +245,17 @@ final class MySlitherJFrame extends JFrame {
 
         validate();
         startTime = System.currentTimeMillis();
+        setStatus(Status.DISCONNECTED);
 
         running = true;
         new Thread(() -> {
             while (running) {
                 long startTime = System.currentTimeMillis();
-                if (client != null && client.connectionStatus == MySlitherWebSocketClient.STATUS_CONNECTED) {
+                if (status == Status.CONNECTED) {
                     canvas.updateModel();
                 }
                 canvas.repaint();
-                if (client != null) {
+                if (status == Status.CONNECTED) {
                     client.checkForKeepalive();
                 }
                 try {
@@ -275,77 +267,104 @@ final class MySlitherJFrame extends JFrame {
         }).start();
     }
 
+    public void onOpen() {
+        switch (status) {
+            case CONNECTING:
+                setStatus(Status.CONNECTED);
+                client.sendInitRequest(snake.getSelectedIndex(), name.getText());
+                break;
+            case DISCONNECTING:
+                disconnect();
+                break;
+            default:
+                throw new IllegalStateException("Connected while not connecting!");
+        }
+    }
+
+    public void onClose() {
+        switch (status) {
+            case CONNECTED:
+            case DISCONNECTING:
+                setStatus(Status.DISCONNECTED);
+                client = null;
+                break;
+            case CONNECTING:
+                client = null;
+                trySingleConnect();
+                break;
+            default:
+                throw new IllegalStateException("Disconnected while not connecting, connected or disconnecting!");
+        }
+    }
+
     private void connect() {
-        setModel(null);
         new Thread(() -> {
+            if (status != Status.DISCONNECTED) {
+                throw new IllegalStateException("Connecting while not disconnected");
+            }
+            setStatus(Status.CONNECTING);
+            setModel(null);
+
             if (useRandomServer.isSelected()) {
                 log("fetching server-list...");
-                URI[] serverList = MySlitherWebSocketClient.getServerList();
+                serverList = MySlitherWebSocketClient.getServerList();
                 log("received " + serverList.length + " servers");
                 if (serverList.length <= 0) {
+                    log("no server found");
+                    setStatus(Status.DISCONNECTED);
                     return;
-                }
-
-                boolean connected = false;
-                while (!connected) {
-                    if (client != null) {
-                        client.close();
-                    }
-                    client = new MySlitherWebSocketClient(serverList[(int) (Math.random() * serverList.length)], this);
-                    log("connecting to " + client.getURI() + " ...");
-                    server.setText(client.getURI().toString());
-                    try {
-                        connected = client.connectBlocking();
-                    } catch (InterruptedException ex) {
-                        connected = false;
-                    }
-                }
-
-            } else {
-                if (client != null) {
-                    client.close();
-                }
-                try {
-                    client = new MySlitherWebSocketClient(new URI(server.getText()), this);
-                } catch (URISyntaxException ex) {
-                    log("invalid server");
-                    return;
-                }
-                log("connecting to " + client.getURI() + " ...");
-                try {
-                    if (!client.connectBlocking()) {
-                        log("server not reachable"); // TODO: set connect-button to connect
-                        return;
-                    }
-                } catch (InterruptedException ex) {
-                    log("interrupted while connecting");
                 }
             }
-            client.sendInitRequest(snake.getSelectedIndex(), name.getText());
+
+            if (status == Status.CONNECTING) {
+                trySingleConnect();
+            }
         }).start();
+    }
+
+    private void trySingleConnect() {
+        if (status != Status.CONNECTING) {
+            throw new IllegalStateException("Trying single connection while not connecting");
+        }
+
+        if (useRandomServer.isSelected()) {
+            client = new MySlitherWebSocketClient(serverList[(int) (Math.random() * serverList.length)], this);
+            server.setText(client.getURI().toString());
+        } else {
+            try {
+                client = new MySlitherWebSocketClient(new URI(server.getText()), this);
+            } catch (URISyntaxException ex) {
+                log("invalid server");
+                setStatus(Status.DISCONNECTED);
+                return;
+            }
+        }
+
+        log("connecting to " + client.getURI() + " ...");
+        client.connect();
     }
 
     private void disconnect() {
-        new Thread(() -> {
-            log("disconnecting...");
-            try {
-                client.closeBlocking();
-            } catch (InterruptedException ex) {
-            }
-            log("disconnected");
-            connect.setEnabled(true);
-        }).start();
+        if (status == Status.DISCONNECTED) {
+            throw new IllegalStateException("Already disconnected");
+        }
+        setStatus(Status.DISCONNECTING);
+        if (client != null) {
+            client.close();
+        }
     }
 
-    public void onClose(MySlitherWebSocketClient closedClient) {
-        log("onClose");
-        connect.setText("connect");
-        connect.setSelected(false);
-        server.setEnabled(!useRandomServer.isSelected());
-        useRandomServer.setEnabled(true);
-        name.setEnabled(true);
-        snake.setEnabled(true);
-        connect.setEnabled(true);
+    private void setStatus(Status newStatus) {
+        if (newStatus != null) {
+            status = newStatus;
+        }
+        connect.setText(status.buttonText);
+        connect.setSelected(status.buttonSelected);
+        connect.setEnabled(status.buttonEnabled);
+        server.setEnabled(status.allowModifyData && !useRandomServer.isSelected());
+        useRandomServer.setEnabled(status.allowModifyData);
+        name.setEnabled(status.allowModifyData);
+        snake.setEnabled(status.allowModifyData);
     }
 
     public void log(String text) {
@@ -390,5 +409,23 @@ final class MySlitherJFrame extends JFrame {
     public void setHighscoreData(int row, String name, int length, boolean highlighted) {
         highscoreList.setValueAt(highlighted ? "<html><b>" + length + "</b></html>" : length, row, 0);
         highscoreList.setValueAt(highlighted ? "<html><b>" + name + "</b></html>" : name, row, 1);
+    }
+
+    private enum Status {
+        DISCONNECTED("connect", false, true, true),
+        CONNECTING("connecting...", true, true, false),
+        CONNECTED("disconnect", true, true, false),
+        DISCONNECTING("disconnecting...", false, false, false);
+
+        private final String buttonText;
+        private final boolean buttonSelected, buttonEnabled;
+        private final boolean allowModifyData;
+
+        private Status(String buttonText, boolean buttonSelected, boolean buttonEnabled, boolean allowModifyData) {
+            this.buttonText = buttonText;
+            this.buttonSelected = buttonSelected;
+            this.buttonEnabled = buttonEnabled;
+            this.allowModifyData = allowModifyData;
+        }
     }
 }

@@ -91,7 +91,6 @@ public class MySlitherModel {
                 double snakeDeltaAngle = mamu1 * deltaTime * cSnake.getScang() * cSnake.getSpang();
                 double snakeDistance = cSnake.sp * deltaTime / 4.0;
                 if (snakeDistance > 42) {
-                    view.log("gotta go fazt!");
                     snakeDistance = 42;
                 }
 

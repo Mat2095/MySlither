@@ -20,14 +20,12 @@ import org.java_websocket.handshake.ServerHandshake;
 
 final class MySlitherWebSocketClient extends WebSocketClient {
 
-    public static final int STATUS_CONNECTING = 1, STATUS_CONNECTED = 2, STATUS_CLOSED = 3;
     private static final Map<String, String> HEADER = new LinkedHashMap<>();
     private static final double PI2 = Math.PI * 2;
     private static final byte[] DATA_KEEPALIVE = new byte[]{(byte) 251};
     private static final byte[] DATA_BOOST_START = new byte[]{(byte) 253};
     private static final byte[] DATA_BOOST_STOP = new byte[]{(byte) 254};
 
-    public int connectionStatus;
     private final MySlitherJFrame view;
     private MySlitherModel model;
 
@@ -40,12 +38,11 @@ final class MySlitherWebSocketClient extends WebSocketClient {
 
     public MySlitherWebSocketClient(URI serverUri, MySlitherJFrame view) {
         super(serverUri, new Draft_17(), HEADER);
-        connectionStatus = STATUS_CONNECTING;
         this.view = view;
     }
 
     public void checkForKeepalive() {
-        if (connectionStatus == STATUS_CONNECTED && model != null && !waitingForPong && System.currentTimeMillis() - lastKeepalive > 250) {
+        if (model != null && !waitingForPong && System.currentTimeMillis() - lastKeepalive > 250) {
             lastKeepalive = System.currentTimeMillis();
             waitingForPong = true;
             send(DATA_KEEPALIVE);
@@ -55,16 +52,13 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake sh) {
         view.log("connected: " + sh.getHttpStatusMessage());
-        connectionStatus = STATUS_CONNECTED;
+        view.onOpen();
     }
 
     @Override
     public void onClose(int i, String string, boolean bln) {
         view.log("closed: " + i + ", " + bln + ", " + string);
-        if (connectionStatus == STATUS_CONNECTED) {
-            view.onClose(this);
-        }
-        connectionStatus = STATUS_CLOSED;
+        view.onClose();
     }
 
     @Override
