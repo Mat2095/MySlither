@@ -665,6 +665,9 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             initRequest[3 + i] = (byte) nick.codePointAt(i);
         }
 
+        // pre-init request
+        view.log("sending pre-init request");
+        send(new byte[]{99});
     }
 
     public void sendAngleUpdate(double angle) {
