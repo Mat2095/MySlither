@@ -10,7 +10,7 @@ public class Snake {
     int dir;
     double wang, ang;
     double sp, tsp;
-    double fam;
+    private double fam;
     final Deque<SnakeBodyPart> body;
     private final MySlitherModel model;
 
@@ -47,5 +47,13 @@ public class Snake {
 
     public boolean isBoosting() {
         return tsp > getFsp();
+    }
+
+    public double getFam() {
+        return fam;
+    }
+
+    public void setFam(double fam) {
+        this.fam = fam;
     }
 }

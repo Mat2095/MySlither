@@ -13,6 +13,9 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import javax.swing.AbstractAction;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -97,12 +100,17 @@ final class MySlitherJFrame extends JFrame {
         "57 - glowy-purple",
         "58 - glowy-green"
     };
+    
+    // TODO: skins, prey-size, snake-lenth/width, bot-layer, that-other-thing?
+
+    private final ArrayList<Player> PLAYERS = new ArrayList<>();
 
     private final JTextField server, name;
     private final JComboBox<String> snake;
     private final JCheckBox useRandomServer;
     private final JToggleButton connect;
-    private final JLabel highscoreOTD, rank, length, kills;
+    private final JComboBox<String> player;
+    private final JLabel rank, kills;
     private final JSplitPane rightSplitPane, fullSplitPane;
     private final JTextArea log;
     private final JScrollBar logScrollBar;
@@ -110,10 +118,11 @@ final class MySlitherJFrame extends JFrame {
     private final MySlitherCanvas canvas;
 
     private final long startTime;
-    private boolean running;
+    private final Timer updateTimer;
     private Status status;
     private URI[] serverList;
     private MySlitherWebSocketClient client;
+    public MySlitherModel model;
     public final Object modelLock = new Object();
 
     public MySlitherJFrame() {
@@ -122,24 +131,27 @@ final class MySlitherJFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                updateTimer.cancel();
                 if (status == Status.CONNECTING || status == Status.CONNECTED) {
                     disconnect();
                 }
-                running = false;
+                canvas.repaintTimer.cancel();
             }
         });
 
         getContentPane().setLayout(new BorderLayout());
+
+        canvas = new MySlitherCanvas(this);
 
         // === upper row ===
         JPanel settings = new JPanel(new GridBagLayout());
 
         server = new JTextField(16);
 
-        name = new JTextField(16);
+        name = new JTextField("MySlitherEaterBot", 16);
 
         snake = new JComboBox<>(SNAKES);
-        snake.setMaximumRowCount(SNAKES.length);
+        snake.setMaximumRowCount(snake.getItemCount());
 
         useRandomServer = new JCheckBox("use random server", true);
         useRandomServer.addActionListener(a -> {
@@ -161,13 +173,15 @@ final class MySlitherJFrame extends JFrame {
             }
         });
 
-        highscoreOTD = new JLabel("today's longest (???, length ???): \"???\"");
+        PLAYERS.add(canvas.mouseInput);
+        PLAYERS.addAll(EaterBot.getPlayers());
 
-        rank = new JLabel("rank: ???/???");
+        player = new JComboBox<>(PLAYERS.stream().map(p -> p.name).toArray(size -> new String[size]));
+        player.setMaximumRowCount(player.getItemCount());
 
-        length = new JLabel("length: ???");
+        rank = new JLabel();
 
-        kills = new JLabel("kills: ???");
+        kills = new JLabel();
 
         settings.add(new JLabel("server:"),
                 new GridBagConstraints(0, 0, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
@@ -187,12 +201,16 @@ final class MySlitherJFrame extends JFrame {
                 new GridBagConstraints(2, 1, 1, 2, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(new JSeparator(SwingConstants.VERTICAL),
                 new GridBagConstraints(3, 0, 1, 3, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 6, 0, 6), 0, 0));
-        settings.add(highscoreOTD,
-                new GridBagConstraints(4, 0, 2, 1, 0, 0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
+        settings.add(new JLabel("player:"),
+                new GridBagConstraints(4, 0, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
+        settings.add(player,
+                new GridBagConstraints(5, 0, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
+        settings.add(new JLabel("rank:"),
+                new GridBagConstraints(4, 1, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(rank,
-                new GridBagConstraints(4, 1, 1, 1, 0, 0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
-        settings.add(length,
-                new GridBagConstraints(4, 2, 1, 1, 0, 0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
+                new GridBagConstraints(5, 1, 1, 1, 0, 0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
+        settings.add(new JLabel("kills:"),
+                new GridBagConstraints(4, 2, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(kills,
                 new GridBagConstraints(5, 2, 1, 1, 0, 0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
 
@@ -227,8 +245,6 @@ final class MySlitherJFrame extends JFrame {
                 });
             }
         });
-
-        canvas = new MySlitherCanvas(this);
 
         highscoreList = new JTable(10, 2);
         highscoreList.setEnabled(false);
@@ -267,24 +283,18 @@ final class MySlitherJFrame extends JFrame {
         startTime = System.currentTimeMillis();
         setStatus(Status.DISCONNECTED);
 
-        running = true;
-        new Thread(() -> {
-            while (running) {
-                long startTime = System.currentTimeMillis();
-                if (status == Status.CONNECTED) {
-                    canvas.updateModel();
-                }
-                canvas.repaint();
-                if (status == Status.CONNECTED) {
-                    client.checkForKeepalive();
-                }
-                try {
-                    Thread.sleep(Math.max(1, 20 - (System.currentTimeMillis() - startTime)));
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
+        updateTimer = new Timer();
+        updateTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                synchronized (modelLock) {
+                    if (status == Status.CONNECTED && model != null) {
+                        model.update();
+                        client.sendData(getPlayer().action(model));
+                    }
                 }
             }
-        }).start();
+        }, 1, 10);
     }
 
     public void onOpen() {
@@ -402,8 +412,16 @@ final class MySlitherJFrame extends JFrame {
         });
     }
 
+    public Player getPlayer() {
+        return PLAYERS.get(player.getSelectedIndex());
+    }
+
     public void setModel(MySlitherModel model) {
-        canvas.setModel(model);
+        synchronized (modelLock) {
+            this.model = model;
+            rank.setText(null);
+            kills.setText(null);
+        }
     }
 
     public void setMap(boolean[] map) {
@@ -411,19 +429,11 @@ final class MySlitherJFrame extends JFrame {
     }
 
     public void setRank(int newRank, int playerCount) {
-        rank.setText("rank: " + newRank + "/" + playerCount);
-    }
-
-    public void setLength(int newLength) {
-        length.setText("length: " + newLength);
+        rank.setText(newRank + "/" + playerCount);
     }
 
     public void setKills(int newKills) {
-        kills.setText("kills: " + newKills);
-    }
-
-    public void setHighscoreOTD(String name, int length, String message) {
-        highscoreOTD.setText("today's longest (" + name + ", length " + length + "): \"" + message + "\"");
+        kills.setText(String.valueOf(newKills));
     }
 
     public void setHighscoreData(int row, String name, int length, boolean highlighted) {

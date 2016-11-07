@@ -1,5 +1,6 @@
 package de.mat2095.my_slither;
 
+import static de.mat2095.my_slither.MySlitherModel.PI2;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,20 +22,23 @@ import org.java_websocket.handshake.ServerHandshake;
 final class MySlitherWebSocketClient extends WebSocketClient {
 
     private static final Map<String, String> HEADER = new LinkedHashMap<>();
-    private static final double PI2 = Math.PI * 2;
-    private static final byte[] DATA_KEEPALIVE = new byte[]{(byte) 251};
+    private static final byte[] DATA_PING = new byte[]{(byte) 251};
     private static final byte[] DATA_BOOST_START = new byte[]{(byte) 253};
     private static final byte[] DATA_BOOST_STOP = new byte[]{(byte) 254};
 
     private final MySlitherJFrame view;
     private MySlitherModel model;
 
-    private long lastKeepalive;
     private byte[] initRequest;
+    private long lastAngleTime, lastPingTime;
+    private byte lastAngleContent, angleToBeSent;
+    private boolean lastBoostContent;
     private boolean waitingForPong;
 
     static {
         HEADER.put("Origin", "http://slither.io");
+        HEADER.put("Pragma", "no-cache");
+        HEADER.put("Cache-Control", "no-cache");
     }
 
     public MySlitherWebSocketClient(URI serverUri, MySlitherJFrame view) {
@@ -42,11 +46,26 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         this.view = view;
     }
 
-    public void checkForKeepalive() {
-        if (model != null && !waitingForPong && System.currentTimeMillis() - lastKeepalive > 250) {
-            lastKeepalive = System.currentTimeMillis();
+    public void sendData(Player.Wish wish) {
+
+        if (wish.angle != null) {
+            angleToBeSent = (byte) (wish.angle * 251 / PI2);
+        }
+        if (angleToBeSent != lastAngleContent && System.currentTimeMillis() - lastAngleTime > 100) {
+            lastAngleTime = System.currentTimeMillis();
+            lastAngleContent = angleToBeSent;
+            send(new byte[]{angleToBeSent});
+        }
+
+        if (wish.boost != null && wish.boost != lastBoostContent) {
+            lastBoostContent = wish.boost;
+            send(wish.boost ? DATA_BOOST_START : DATA_BOOST_STOP);
+        }
+
+        if (!waitingForPong && System.currentTimeMillis() - lastPingTime > 250) {
+            lastPingTime = System.currentTimeMillis();
             waitingForPong = true;
-            send(DATA_KEEPALIVE);
+            send(DATA_PING);
         }
     }
 
@@ -74,7 +93,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     }
 
     @Override
-    public void onMessage(ByteBuffer bytes) {
+    public void onMessage(ByteBuffer bytes) { //TODO: use first two bytes
         byte[] b = bytes.array();
         if (b.length < 3) {
             view.log("too short");
@@ -138,7 +157,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             case 'b':
             case 'f':
             case 'F':
-                processAddFood(data, cmd == 'F');
+                processAddFood(data, cmd == 'F', cmd != 'f');
                 break;
             case 'c':
                 processRemoveFood(data);
@@ -226,7 +245,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             return;
         }
 
-        model = new MySlitherModel(gameRadius, sectorSize, spangdv, nsp1, nsp2, nsp3, mamu1, mamu2, cst, mscps, view, this);
+        model = new MySlitherModel(gameRadius, sectorSize, spangdv, nsp1, nsp2, nsp3, mamu1, mamu2, cst, mscps, view);
         view.setModel(model);
         view.setKills(0);
     }
@@ -324,7 +343,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         int snakeID = (data[3] << 8) | data[4];
         synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
-            snake.fam = ((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0;
+            snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0);
         }
     }
 
@@ -336,7 +355,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
             if (data.length == 8) {
-                snake.fam = ((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0;
+                snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0);
             }
             snake.body.pollLast();
         }
@@ -362,7 +381,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             double newY = absoluteCoords ? (data[7] << 8) | data[8] : head.y + data[6] - 128;
 
             if (newBodyPart) {
-                snake.fam = ((data[absoluteCoords ? 9 : 7] << 16) | (data[absoluteCoords ? 10 : 8] << 8) | (data[absoluteCoords ? 11 : 9])) / 16777215.0;
+                snake.setFam(((data[absoluteCoords ? 9 : 7] << 16) | (data[absoluteCoords ? 10 : 8] << 8) | (data[absoluteCoords ? 11 : 9])) / 16777215.0);
             } else {
                 snake.body.pollLast();
             }
@@ -463,7 +482,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         for (int i = 0; i < data.length - 10 - nameLength; i++) {
             message.append((char) data[10 + nameLength + i]);
         }
-        view.setHighscoreOTD(name.toString(), model.getSnakeLength(bodyLength, fillAmount), message.toString());
+        view.log("Received Highscore of the day: " + name.toString() + " (" + model.getSnakeLength(bodyLength, fillAmount) + "): " + message.toString());
     }
 
     private void processPong(int[] data) {
@@ -541,7 +560,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
     }
 
-    private void processAddFood(int[] data, boolean allowMultipleEntities) {
+    private void processAddFood(int[] data, boolean allowMultipleEntities, boolean fastSpawn) {
         if ((!allowMultipleEntities && data.length != 9) || (allowMultipleEntities && (data.length < 9 || ((data.length - 9) % 6 != 0)))) {
             view.log("add food wrong length!");
             return;
@@ -550,7 +569,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             int x = (data[i - 4] << 8) | data[i - 3];
             int z = (data[i - 2] << 8) | data[i - 1];
             double radius = data[i] / 5.0;
-            model.addFood(x, z, radius);
+            model.addFood(x, z, radius, fastSpawn); // TODO: now always...
         }
     }
 
@@ -670,17 +689,6 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         send(new byte[]{99});
     }
 
-    public void sendAngleUpdate(double angle) {
-        if (angle < 0 || angle >= PI2) {
-            throw new IllegalArgumentException("angle not in range 0 PI2");
-        }
-        send(new byte[]{(byte) (angle * 251 / PI2)});
-    }
-
-    public void sendBoostUpdate(boolean boost) {
-        send(boost ? DATA_BOOST_START : DATA_BOOST_STOP);
-    }
-
     static URI[] getServerList() {
 
         String i49526_String;
@@ -691,7 +699,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             BufferedReader i49526_BufferedReader = new BufferedReader(new InputStreamReader(i49526_InputStream));
             i49526_String = i49526_BufferedReader.lines().collect(Collectors.joining("\n"));
         } catch (IOException ex) {
-            throw new Error("Error reading server-list!");
+            throw new Error("Error reading server-list!"); // TODO: set to disconnected
         }
 
         int[] data = new int[(i49526_String.length() - 1) / 2];
@@ -715,7 +723,8 @@ final class MySlitherWebSocketClient extends WebSocketClient {
                         + data[i * 11 + 1] + "."
                         + data[i * 11 + 2] + "."
                         + data[i * 11 + 3] + ":"
-                        + ((data[i * 11 + 4] << 16) + (data[i * 11 + 5] << 8) + data[i * 11 + 6]));
+                        + ((data[i * 11 + 4] << 16) + (data[i * 11 + 5] << 8) + data[i * 11 + 6])
+                        + "/slither");
             } catch (URISyntaxException ex) {
                 throw new Error("Error building server-address!");
             }
