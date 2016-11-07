@@ -36,7 +36,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 final class MySlitherJFrame extends JFrame {
 
-    private static final String[] SNAKES = new String[]{
+    private static final String[] SNAKES = {
         "00 - purple",
         "01 - blue",
         "02 - cyan",
@@ -75,7 +75,27 @@ final class MySlitherJFrame extends JFrame {
         "35 - red/white/pink",
         "36 - blue/white/light-blue",
         "37 - Kwebbelkop",
-        "38 - yellow"
+        "38 - yellow",
+        "39 - PewDiePie",
+        "40 - green happy",
+        "41 - red with eyes",
+        "42 - Google Play",
+        "43 - UK",
+        "44 - Ghost",
+        "45 - Canada",
+        "46 - Swiss",
+        "47 - Moldova",
+        "48 - Vietnam",
+        "49 - Argentina",
+        "50 - Colombia",
+        "51 - Thailand",
+        "52 - red/yellow",
+        "53 - glowy-blue",
+        "54 - glowy-red",
+        "55 - glowy-yellow",
+        "56 - glowy-orange",
+        "57 - glowy-purple",
+        "58 - glowy-green"
     };
 
     private final JTextField server, name;

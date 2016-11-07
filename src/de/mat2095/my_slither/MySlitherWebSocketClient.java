@@ -30,6 +30,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     private MySlitherModel model;
 
     private long lastKeepalive;
+    private byte[] initRequest;
     private boolean waitingForPong;
 
     static {
@@ -85,6 +86,9 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
         char cmd = (char) data[2];
         switch (cmd) {
+            case '6':
+                processPreInitResponse(data);
+                break;
             case 'a':
                 processInitResponse(data);
                 break;
@@ -153,6 +157,51 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
     }
 
+    private void processPreInitResponse(int[] data) {
+        view.log("sending decrypted, manipulated secret");
+        send(decodeSecret(data));
+
+        view.log("sending init-request");
+        send(initRequest);
+    }
+
+    private static byte[] decodeSecret(int[] secret) {
+
+        byte[] result = new byte[24];
+
+        int globalValue = 0;
+        for (int i = 0; i < 24; i++) {
+            int value1 = secret[17 + i * 2];
+            if (value1 <= 96) {
+                value1 += 32;
+            }
+            value1 = (value1 - 98 - i * 34) % 26;
+            if (value1 < 0) {
+                value1 += 26;
+            }
+
+            int value2 = secret[18 + i * 2];
+            if (value2 <= 96) {
+                value2 += 32;
+            }
+            value2 = (value2 - 115 - i * 34) % 26;
+            if (value2 < 0) {
+                value2 += 26;
+            }
+
+            int interimResult = (value1 << 4) | value2;
+            int offset = interimResult >= 97 ? 97 : 65;
+            interimResult -= offset;
+            if (i == 0) {
+                globalValue = 2 + interimResult;
+            }
+            result[i] = (byte) ((interimResult + globalValue) % 26 + offset);
+            globalValue += 3 + interimResult;
+        }
+
+        return result;
+    }
+
     private void processInitResponse(int[] data) {
         if (data.length != 26) {
             view.log("init response wrong length!");
@@ -171,7 +220,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         double cst = ((data[23] << 8) | data[24]) / 1000.0;
         int protocolVersion = data[25];
 
-        if (protocolVersion != 8) {
+        if (protocolVersion != 10) {
             view.log("wrong protocol-version (" + protocolVersion + ")");
             close();
             return;
@@ -608,18 +657,14 @@ final class MySlitherWebSocketClient extends WebSocketClient {
 
     public void sendInitRequest(int snakeNr, String nick) {
 
-        byte[] request = new byte[3 + nick.length()];
-
-        request[0] = 115;
-        request[1] = 7;
-        request[2] = (byte) snakeNr;
-
+        initRequest = new byte[3 + nick.length()];
+        initRequest[0] = 115;
+        initRequest[1] = 9;
+        initRequest[2] = (byte) snakeNr;
         for (int i = 0; i < nick.length(); i++) {
-            request[3 + i] = (byte) nick.codePointAt(i);
+            initRequest[3 + i] = (byte) nick.codePointAt(i);
         }
 
-        view.log("sending initRequest");
-        send(request);
     }
 
     public void sendAngleUpdate(double angle) {
