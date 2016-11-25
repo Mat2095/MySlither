@@ -35,6 +35,8 @@ import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 import javax.swing.table.DefaultTableCellRenderer;
 
 final class MySlitherJFrame extends JFrame {
@@ -172,12 +174,28 @@ final class MySlitherJFrame extends JFrame {
                     break;
             }
         });
+        connect.addAncestorListener(new AncestorListener() {
+            @Override
+            public void ancestorAdded(AncestorEvent event) {
+                connect.requestFocusInWindow();
+                connect.removeAncestorListener(this);
+            }
+
+            @Override
+            public void ancestorRemoved(AncestorEvent event) {
+            }
+
+            @Override
+            public void ancestorMoved(AncestorEvent event) {
+            }
+        });
 
         PLAYERS.add(canvas.mouseInput);
         PLAYERS.addAll(EaterBot.getPlayers());
 
         player = new JComboBox<>(PLAYERS.stream().map(p -> p.name).toArray(size -> new String[size]));
         player.setMaximumRowCount(player.getItemCount());
+        player.setSelectedIndex(1);
 
         rank = new JLabel();
 
