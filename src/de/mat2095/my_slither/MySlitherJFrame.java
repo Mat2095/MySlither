@@ -1,13 +1,6 @@
 package de.mat2095.my_slither;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -16,25 +9,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
-import javax.swing.AbstractAction;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollBar;
-import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JSplitPane;
-import javax.swing.JTable;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JToggleButton;
-import javax.swing.KeyStroke;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import javax.swing.event.AncestorEvent;
 import javax.swing.event.AncestorListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -100,10 +75,17 @@ final class MySlitherJFrame extends JFrame {
         "55 - glowy-yellow",
         "56 - glowy-orange",
         "57 - glowy-purple",
-        "58 - glowy-green"
+        "58 - glowy-green",
+        "59 - yellow-M",
+        "60 - detailed UK",
+        "61 - glowy-colorful",
+        "62 - purple spiral",
+        "63 - red/black",
+        "64 - blue/black"
     };
-    
+
     // TODO: skins, prey-size, snake-lenth/width, bot-layer, that-other-thing?
+    // show ping
 
     private final ArrayList<Player> PLAYERS = new ArrayList<>();
 

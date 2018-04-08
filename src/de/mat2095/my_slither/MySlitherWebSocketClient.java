@@ -239,7 +239,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         double cst = ((data[23] << 8) | data[24]) / 1000.0;
         int protocolVersion = data[25];
 
-        if (protocolVersion != 10) {
+        if (protocolVersion != 11) {
             view.log("wrong protocol-version (" + protocolVersion + ")");
             close();
             return;
@@ -539,13 +539,15 @@ final class MySlitherWebSocketClient extends WebSocketClient {
                 name.append((char) data[25 + i]);
             }
 
-            double currentBodyPartX = ((data[nameLength + 25] << 16) | (data[nameLength + 26] << 8) | data[nameLength + 27]) / 5.0;
-            double currentBodyPartY = ((data[nameLength + 28] << 16) | (data[nameLength + 29] << 8) | data[nameLength + 30]) / 5.0;
+            int customSkinDataLength = data[nameLength + 25];
+
+            double currentBodyPartX = ((data[nameLength + customSkinDataLength + 26] << 16) | (data[nameLength + customSkinDataLength + 27] << 8) | data[nameLength + customSkinDataLength + 28]) / 5.0;
+            double currentBodyPartY = ((data[nameLength + customSkinDataLength + 29] << 16) | (data[nameLength + customSkinDataLength + 30] << 8) | data[nameLength + customSkinDataLength + 31]) / 5.0;
 
             Deque<SnakeBodyPart> body = new LinkedList<>();
             body.addFirst(new SnakeBodyPart(currentBodyPartX, currentBodyPartY));
 
-            for (int nextBodyPartStartPosition = nameLength + 31; nextBodyPartStartPosition + 1 < data.length; nextBodyPartStartPosition += 2) {
+            for (int nextBodyPartStartPosition = nameLength + customSkinDataLength + 32; nextBodyPartStartPosition + 1 < data.length; nextBodyPartStartPosition += 2) {
                 currentBodyPartX += (data[nextBodyPartStartPosition] - 127) / 2.0;
                 currentBodyPartY += (data[nextBodyPartStartPosition + 1] - 127) / 2.0;
                 body.addFirst(new SnakeBodyPart(currentBodyPartX, currentBodyPartY));
@@ -676,12 +678,13 @@ final class MySlitherWebSocketClient extends WebSocketClient {
 
     public void sendInitRequest(int snakeNr, String nick) {
 
-        initRequest = new byte[3 + nick.length()];
+        initRequest = new byte[4 + nick.length()];
         initRequest[0] = 115;
-        initRequest[1] = 9;
+        initRequest[1] = 10;
         initRequest[2] = (byte) snakeNr;
+        initRequest[3] = (byte) nick.length();
         for (int i = 0; i < nick.length(); i++) {
-            initRequest[3 + i] = (byte) nick.codePointAt(i);
+            initRequest[4 + i] = (byte) nick.codePointAt(i);
         }
 
         // pre-init request
