@@ -1,6 +1,6 @@
 package de.mat2095.my_slither;
 
-import javax.swing.UIManager;
+import javax.swing.*;
 
 public final class Main {
 
@@ -8,7 +8,14 @@ public final class Main {
 
         System.setProperty("sun.java2d.opengl", "false");
 
-        UIManager.setLookAndFeel("com.bulenkov.darcula.DarculaLaf");
+        // workaround to fix issue on linux: https://github.com/bulenkov/Darcula/issues/29
+        UIManager.getFont("Label.font");
+        try {
+            UIManager.setLookAndFeel("com.bulenkov.darcula.DarculaLaf");
+        } catch (ClassNotFoundException | InstantiationException
+                | IllegalAccessException | UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        }
 
         new MySlitherJFrame().setVisible(true);
 
