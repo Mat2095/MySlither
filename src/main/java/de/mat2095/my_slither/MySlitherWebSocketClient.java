@@ -15,7 +15,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.drafts.Draft_17;
+import org.java_websocket.drafts.Draft_6455;
 import org.java_websocket.handshake.ServerHandshake;
 
 final class MySlitherWebSocketClient extends WebSocketClient {
@@ -38,7 +38,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     }
 
     public MySlitherWebSocketClient(URI serverUri, MySlitherJFrame view) {
-        super(serverUri, new Draft_17(), HEADER);
+        super(serverUri, new Draft_6455(), HEADER);
         this.view = view;
     }
 
