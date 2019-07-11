@@ -20,8 +20,9 @@ repositories {
 }
 
 dependencies {
-    compile "com.bulenkov:darcula:2018.2"
+    runtime "com.bulenkov:darcula:2018.2"
     compile "org.java-websocket:Java-WebSocket:1.4.0"
+    runtime "org.slf4j:slf4j-simple:1.7.26"
 }
 
 
