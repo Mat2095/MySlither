@@ -2,7 +2,8 @@ package de.mat2095.my_slither;
 
 import java.util.Deque;
 
-public class Snake {
+
+class Snake {
 
     final int id;
     final String name;
@@ -14,7 +15,7 @@ public class Snake {
     final Deque<SnakeBodyPart> body;
     private final MySlitherModel model;
 
-    public Snake(int id, String name, double x, double y, double wang, double ang, double sp, double fam, Deque<SnakeBodyPart> body, MySlitherModel model) {
+    Snake(int id, String name, double x, double y, double wang, double ang, double sp, double fam, Deque<SnakeBodyPart> body, MySlitherModel model) {
         this.id = id;
         this.name = name;
         this.x = x;
@@ -33,11 +34,11 @@ public class Snake {
         return Math.min(6, 1 + (body.size() - 2) / 106.0);
     }
 
-    public double getScang() {
+    double getScang() {
         return 0.13 + 0.87 * Math.pow((7 - getSc()) / 6, 2);
     }
 
-    public double getSpang() {
+    double getSpang() {
         return Math.min(sp / model.spangdv, 1);
     }
 
@@ -45,7 +46,7 @@ public class Snake {
         return model.nsp1 + model.nsp2 * getSc();
     }
 
-    public boolean isBoosting() {
+    boolean isBoosting() {
         return tsp > getFsp();
     }
 }

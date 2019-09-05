@@ -2,6 +2,7 @@ package de.mat2095.my_slither;
 
 import javax.swing.*;
 
+
 public final class Main {
 
     public static void main(String[] args) throws Exception {
@@ -12,8 +13,7 @@ public final class Main {
         UIManager.getFont("Label.font");
         try {
             UIManager.setLookAndFeel("com.bulenkov.darcula.DarculaLaf");
-        } catch (ClassNotFoundException | InstantiationException
-                | IllegalAccessException | UnsupportedLookAndFeelException e) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
             e.printStackTrace();
         }
 

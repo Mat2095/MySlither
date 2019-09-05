@@ -4,7 +4,8 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class MySlitherModel {
+
+class MySlitherModel {
 
     private static final double PI2 = Math.PI * 2;
 
@@ -65,11 +66,11 @@ public class MySlitherModel {
         lastUpdateTime = System.currentTimeMillis();
     }
 
-    public int getSnakeLength(int bodyLength, double fillAmount) {
+    int getSnakeLength(int bodyLength, double fillAmount) {
         return (int) (15 * (fpsls[bodyLength] + fillAmount / fmlts[bodyLength]) - 20);
     }
 
-    public void update() {
+    void update() {
         synchronized (view.modelLock) {
             long newTime = System.currentTimeMillis();
 
@@ -188,7 +189,7 @@ public class MySlitherModel {
         }
     }
 
-    public void addSnake(int snakeID, String name, double x, double y, double wang, double ang, double sp, double fam, Deque<SnakeBodyPart> body) {
+    void addSnake(int snakeID, String name, double x, double y, double wang, double ang, double sp, double fam, Deque<SnakeBodyPart> body) {
         synchronized (view.modelLock) {
             Snake newSnake = new Snake(snakeID, name, x, y, wang, ang, sp, fam, body, this);
             if (snake == null) {
@@ -198,23 +199,23 @@ public class MySlitherModel {
         }
     }
 
-    public Snake getSnake(int snakeID) {
+    Snake getSnake(int snakeID) {
         return snakes.get(snakeID);
     }
 
-    public void removeSnake(int snakeID) {
+    void removeSnake(int snakeID) {
         synchronized (view.modelLock) {
             snakes.remove(snakeID);
         }
     }
 
-    public void setOwnSnakeWang(double wang) {
+    void setOwnSnakeWang(double wang) {
         synchronized (view.modelLock) {
             wAngle = wang;
         }
     }
 
-    public void setOwnSnakeBoost(boolean boost) {
+    void setOwnSnakeBoost(boolean boost) {
         synchronized (view.modelLock) {
             if (snake != null && boost != this.boost) {
                 this.boost = boost;
@@ -223,41 +224,41 @@ public class MySlitherModel {
         }
     }
 
-    public void addPrey(int id, double x, double y, double radius, int dir, double wang, double ang, double sp) {
+    void addPrey(int id, double x, double y, double radius, int dir, double wang, double ang, double sp) {
         synchronized (view.modelLock) {
             preys.put(id, new Prey(x, y, radius, dir, wang, ang, sp));
         }
     }
 
-    public Prey getPrey(int id) {
+    Prey getPrey(int id) {
         return preys.get(id);
     }
 
-    public void removePrey(int id) {
+    void removePrey(int id) {
         synchronized (view.modelLock) {
             preys.remove(id);
         }
     }
 
-    public void addFood(int x, int y, double size) {
+    void addFood(int x, int y, double size) {
         synchronized (view.modelLock) {
             foods.put(y * gameRadius * 3 + x, new Food(x, y, size));
         }
     }
 
-    public void removeFood(int x, int y) {
+    void removeFood(int x, int y) {
         synchronized (view.modelLock) {
             foods.remove(y * gameRadius * 3 + x);
         }
     }
 
-    public void addSector(int x, int y) {
+    void addSector(int x, int y) {
         synchronized (view.modelLock) {
             sectors[y][x] = true;
         }
     }
 
-    public void removeSector(int x, int y) {
+    void removeSector(int x, int y) {
         synchronized (view.modelLock) {
             sectors[y][x] = false;
             foods.values().removeIf(f -> {

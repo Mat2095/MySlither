@@ -1,13 +1,6 @@
 package de.mat2095.my_slither;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RadialGradientPaint;
-import java.awt.RenderingHints;
-import java.awt.Stroke;
+import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -15,7 +8,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
-import javax.swing.JPanel;
+import javax.swing.*;
+
 
 final class MySlitherCanvas extends JPanel {
 
@@ -45,7 +39,7 @@ final class MySlitherCanvas extends JPanel {
     private MySlitherModel model;
     private int zoom = 12;
 
-    public MySlitherCanvas(MySlitherJFrame view) {
+    MySlitherCanvas(MySlitherJFrame view) {
         super();
         this.view = view;
 
@@ -243,10 +237,10 @@ final class MySlitherCanvas extends JPanel {
                 oldStroke = g.getStroke();
                 g.setStroke(new BasicStroke(2));
                 g.draw(new Rectangle2D.Double(
-                        model.snake.x * 80 / (model.gameRadius * 2) - w / zoomScale / m * 40 + w - 80,
-                        model.snake.y * 80 / (model.gameRadius * 2) - h / zoomScale / m * 40 + h - 80,
-                        w / zoomScale / m * 80,
-                        h / zoomScale / m * 80
+                    model.snake.x * 80 / (model.gameRadius * 2) - w / zoomScale / m * 40 + w - 80,
+                    model.snake.y * 80 / (model.gameRadius * 2) - h / zoomScale / m * 40 + h - 80,
+                    w / zoomScale / m * 80,
+                    h / zoomScale / m * 80
                 ));
                 g.setStroke(oldStroke);
             }

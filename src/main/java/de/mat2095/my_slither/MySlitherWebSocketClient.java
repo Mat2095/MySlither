@@ -18,6 +18,7 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_6455;
 import org.java_websocket.handshake.ServerHandshake;
 
+
 final class MySlitherWebSocketClient extends WebSocketClient {
 
     private static final Map<String, String> HEADER = new LinkedHashMap<>();
@@ -37,12 +38,12 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         HEADER.put("Origin", "http://slither.io");
     }
 
-    public MySlitherWebSocketClient(URI serverUri, MySlitherJFrame view) {
+    MySlitherWebSocketClient(URI serverUri, MySlitherJFrame view) {
         super(serverUri, new Draft_6455(), HEADER);
         this.view = view;
     }
 
-    public void checkForKeepalive() {
+    void checkForKeepalive() {
         if (model != null && !waitingForPong && System.currentTimeMillis() - lastKeepalive > 250) {
             lastKeepalive = System.currentTimeMillis();
             waitingForPong = true;
@@ -601,7 +602,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
                 case 15:
                     prey.dir = data[9] - 48;
                     prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                    prey.sp = ((data[13] << 8) | data[14]) / 1000;
+                    prey.sp = ((data[13] << 8) | data[14]) / 1000.0;
                     break;
                 case 16:
                     prey.dir = data[9] - 48;
@@ -657,7 +658,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
     }
 
-    public void sendInitRequest(int snakeNr, String nick) {
+    void sendInitRequest(int snakeNr, String nick) {
 
         initRequest = new byte[4 + nick.length()];
         initRequest[0] = 115;
@@ -673,14 +674,14 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         send(new byte[]{99});
     }
 
-    public void sendAngleUpdate(double angle) {
+    void sendAngleUpdate(double angle) {
         if (angle < 0 || angle >= PI2) {
             throw new IllegalArgumentException("angle not in range 0 PI2");
         }
         send(new byte[]{(byte) (angle * 251 / PI2)});
     }
 
-    public void sendBoostUpdate(boolean boost) {
+    void sendBoostUpdate(boolean boost) {
         send(boost ? DATA_BOOST_START : DATA_BOOST_STOP);
     }
 

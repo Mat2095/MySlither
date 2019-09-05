@@ -1,6 +1,7 @@
 package de.mat2095.my_slither;
 
-public class Prey {
+
+class Prey {
 
     double x, y;
     final double radius;
@@ -8,7 +9,7 @@ public class Prey {
     double wang, ang;
     double sp;
 
-    public Prey(double x, double y, double radius, int dir, double wang, double ang, double sp) {
+    Prey(double x, double y, double radius, int dir, double wang, double ang, double sp) {
         this.x = x;
         this.y = y;
         this.radius = radius;

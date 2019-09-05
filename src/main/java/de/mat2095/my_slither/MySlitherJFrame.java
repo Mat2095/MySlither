@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 
+
 final class MySlitherJFrame extends JFrame {
 
     private static final String[] SNAKES = {
@@ -95,9 +96,9 @@ final class MySlitherJFrame extends JFrame {
     private Status status;
     private URI[] serverList;
     private MySlitherWebSocketClient client;
-    public final Object modelLock = new Object();
+    final Object modelLock = new Object();
 
-    public MySlitherJFrame() {
+    MySlitherJFrame() {
         super("MySlither");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -268,7 +269,7 @@ final class MySlitherJFrame extends JFrame {
         }).start();
     }
 
-    public void onOpen() {
+    void onOpen() {
         switch (status) {
             case CONNECTING:
                 setStatus(Status.CONNECTED);
@@ -282,7 +283,7 @@ final class MySlitherJFrame extends JFrame {
         }
     }
 
-    public void onClose() {
+    void onClose() {
         switch (status) {
             case CONNECTED:
             case DISCONNECTING:
@@ -368,11 +369,11 @@ final class MySlitherJFrame extends JFrame {
         snake.setEnabled(status.allowModifyData);
     }
 
-    public void log(String text) {
+    void log(String text) {
         print(String.format("%6d\t%s", System.currentTimeMillis() - startTime, text));
     }
 
-    public void print(String text) {
+    private void print(String text) {
         SwingUtilities.invokeLater(() -> {
             boolean scrollToBottom = !logScrollBar.getValueIsAdjusting() && logScrollBar.getValue() >= logScrollBar.getMaximum() - logScrollBar.getVisibleAmount();
             log.append('\n' + text);
@@ -383,31 +384,31 @@ final class MySlitherJFrame extends JFrame {
         });
     }
 
-    public void setModel(MySlitherModel model) {
+    void setModel(MySlitherModel model) {
         canvas.setModel(model);
     }
 
-    public void setMap(boolean[] map) {
+    void setMap(boolean[] map) {
         canvas.setMap(map);
     }
 
-    public void setRank(int newRank, int playerCount) {
+    void setRank(int newRank, int playerCount) {
         rank.setText("rank: " + newRank + "/" + playerCount);
     }
 
-    public void setLength(int newLength) {
+    void setLength(int newLength) {
         length.setText("length: " + newLength);
     }
 
-    public void setKills(int newKills) {
+    void setKills(int newKills) {
         kills.setText("kills: " + newKills);
     }
 
-    public void setHighscoreOTD(String name, int length, String message) {
+    void setHighscoreOTD(String name, int length, String message) {
         highscoreOTD.setText("today's longest (" + name + ", length " + length + "): \"" + message + "\"");
     }
 
-    public void setHighscoreData(int row, String name, int length, boolean highlighted) {
+    void setHighscoreData(int row, String name, int length, boolean highlighted) {
         highscoreList.setValueAt(highlighted ? "<html><b>" + length + "</b></html>" : length, row, 0);
         highscoreList.setValueAt(highlighted ? "<html><b>" + name + "</b></html>" : name, row, 1);
     }
