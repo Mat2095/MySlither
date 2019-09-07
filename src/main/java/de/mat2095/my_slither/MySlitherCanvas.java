@@ -1,5 +1,7 @@
 package de.mat2095.my_slither;
 
+import static de.mat2095.my_slither.MySlitherModel.PI2;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -8,12 +10,13 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.swing.*;
 
 
 final class MySlitherCanvas extends JPanel {
-
-    private static final double PI2 = Math.PI * 2;
 
     private static final Color BACKGROUND_COLOR = new Color(0x2B2B2B);
     private static final Color FOREGROUND_COLOR = new Color(0xA9B7C6);
@@ -32,12 +35,38 @@ final class MySlitherCanvas extends JPanel {
     private static final Color MAP_COLOR = new Color(0xA0A9B7C6, true);
     private static final Color MAP_POSITION_COLOR = new Color(0xE09E2927, true);
     private static final Color NAME_SHADOW_COLOR = new Color(0xC02B2B2B, true);
-    private static final Font NAME_FONT = Font.decode("Arial-BOLD");
+    private static final Font NAME_FONT = Font.decode("SansSerif-BOLD");
+    private static final Font DEBUG_FONT = Font.decode("SansSerif-PLAIN-12");
 
     private boolean[] map;
     private final MySlitherJFrame view;
-    private MySlitherModel model;
     private int zoom = 12;
+    private long lastFrameTime;
+    private double fps;
+    final ScheduledExecutorService repaintThread;
+
+    final MouseInput mouseInput = new MouseInput();
+
+    class MouseInput extends Player {
+
+        Double wang;
+        boolean boost;
+
+        private MouseInput() {
+            super("Mouse Input");
+            wang = null;
+            boost = false;
+        }
+
+        private void readWang(MouseEvent e) {
+            wang = (Math.atan2((e.getY() - getHeight() / 2), (e.getX() - getWidth() / 2)) + PI2) % PI2;
+        }
+
+        @Override
+        public Wish action(MySlitherModel model) {
+            return new Wish(wang, boost);
+        }
+    }
 
     MySlitherCanvas(MySlitherJFrame view) {
         super();
@@ -55,48 +84,39 @@ final class MySlitherCanvas extends JPanel {
         addMouseMotionListener(new MouseMotionListener() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (model != null) {
-                    double atan = Math.atan2((e.getY() - getHeight() / 2), (e.getX() - getWidth() / 2));
-                    model.setOwnSnakeWang((atan + PI2) % PI2);
-                }
+                mouseInput.readWang(e);
             }
 
             @Override
             public void mouseMoved(MouseEvent e) {
-                if (model != null) {
-                    double atan = Math.atan2((e.getY() - getHeight() / 2), (e.getX() - getWidth() / 2));
-                    model.setOwnSnakeWang((atan + PI2) % PI2);
-                }
+                mouseInput.readWang(e);
             }
         });
 
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (model != null) {
-                    model.setOwnSnakeBoost(true);
-                }
+                mouseInput.boost = true;
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (model != null) {
-                    model.setOwnSnakeBoost(false);
-                }
+                mouseInput.boost = false;
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                mouseInput.wang = null;
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                mouseInput.readWang(e);
             }
         });
-    }
 
-    void setModel(MySlitherModel model) {
-        synchronized (view.modelLock) {
-            this.model = model;
-        }
-    }
-
-    void updateModel() {
-        if (model != null) {
-            model.update();
-        }
+        repaintThread = Executors.newSingleThreadScheduledExecutor();
+        repaintThread.scheduleAtFixedRate(this::repaint, 1, 16666666, TimeUnit.NANOSECONDS); // 60 FPS
     }
 
     void setMap(boolean[] map) {
@@ -107,7 +127,7 @@ final class MySlitherCanvas extends JPanel {
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
 
-        if (model == null || !(graphics instanceof Graphics2D)) {
+        if (!(graphics instanceof Graphics2D)) {
             return;
         }
 
@@ -118,7 +138,13 @@ final class MySlitherCanvas extends JPanel {
         int h = getHeight();
         int m = Math.min(w, h);
 
+        modelPaintBlock:
         synchronized (view.modelLock) {
+            MySlitherModel model = view.model;
+            if (model == null) {
+                break modelPaintBlock;
+            }
+
             AffineTransform oldTransform = g.getTransform();
             double scale;
             if (zoom == 0 || model.snake == null) {
@@ -149,14 +175,16 @@ final class MySlitherCanvas extends JPanel {
 
             g.setColor(FOOD_COLOR);
             model.foods.values().forEach(food -> {
-                g.fillOval((int) (food.x - food.size / 2), (int) (food.y - food.size / 2), (int) (food.size / 1), (int) (food.size / 1));
+                double foodRadius = food.getRadius();
+                g.fill(new Ellipse2D.Double(food.x - foodRadius, food.y - foodRadius, foodRadius * 2, foodRadius * 2));
             });
 
             model.preys.values().forEach(prey -> {
-                g.setPaint(new RadialGradientPaint((float) (prey.x - 0.5 / scale), (float) (prey.y - 0.5 / scale), (float) prey.radius, PREY_HALO_FRACTIONS, PREY_HALO_COLORS));
-                g.fillRect((int) Math.floor(prey.x - prey.radius - 1), (int) Math.floor(prey.y - prey.radius - 1), (int) (prey.radius * 2 + 2), (int) (prey.radius * 2 + 2));
+                double preyRadius = prey.getRadius();
+                g.setPaint(new RadialGradientPaint((float) (prey.x - 0.5 / scale), (float) (prey.y - 0.5 / scale), (float) (preyRadius * 2), PREY_HALO_FRACTIONS, PREY_HALO_COLORS));
+                g.fillRect((int) Math.floor(prey.x - preyRadius * 2 - 1), (int) Math.floor(prey.y - preyRadius * 2 - 1), (int) (preyRadius * 4 + 3), (int) (preyRadius * 4 + 3));
                 g.setColor(PREY_COLOR);
-                g.fill(new Ellipse2D.Double(prey.x - prey.radius / 2, prey.y - prey.radius / 2, prey.radius, prey.radius));
+                g.fill(new Ellipse2D.Double(prey.x - preyRadius, prey.y - preyRadius, preyRadius * 2, preyRadius * 2));
             });
 
             oldStroke = g.getStroke();
@@ -167,7 +195,7 @@ final class MySlitherCanvas extends JPanel {
                     g.setColor(snake == model.snake ? OWN_SNAKE_BODY_COLOR : SNAKE_BODY_COLOR);
                     g.setStroke(new BasicStroke((float) thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-                    double totalLength = 0;
+                    double totalLength = 0; // TODO: respect FAM, ???
                     double lastX = 0, lastY = 0;
                     for (SnakeBodyPart bodyPart : snake.body) {
                         if (bodyPart != snake.body.getFirst()) {
@@ -201,21 +229,27 @@ final class MySlitherCanvas extends JPanel {
                 }
 
                 if (snake.isBoosting()) {
-                    g.setPaint(new RadialGradientPaint((float) (snake.x - 0.5 / scale), (float) (snake.y - 0.5 / scale), (float) (thickness * 4 / 3), SNAKE_HALO_FRACTIONS, snake == model.snake ? OWN_SNAKE_HALO_COLORS : SNAKE_HALO_COLORS));
+                    g.setPaint(new RadialGradientPaint((float) (snake.x - 0.5 / scale), (float) (snake.y - 0.5 / scale),
+                        (float) (thickness * 4 / 3), SNAKE_HALO_FRACTIONS,
+                        snake == model.snake ? OWN_SNAKE_HALO_COLORS : SNAKE_HALO_COLORS));
                     g.fillRect((int) Math.round(snake.x - thickness * 3 / 2 - 1), (int) Math.round(snake.y - thickness * 3 / 2 - 1), (int) (thickness * 3 + 2), (int) (thickness * 3 + 2));
                 }
                 g.setColor(snake == model.snake ? OWN_SNAKE_COLOR : SNAKE_COLOR);
                 g.fill(new Ellipse2D.Double(snake.x - thickness * 2 / 3, snake.y - thickness * 2 / 3, thickness * 4 / 3, thickness * 4 / 3));
 
-                int length = model.getSnakeLength(snake.body.size(), snake.fam);
+                String lengthText = "" + model.getSnakeLength(snake.body.size(), snake.getFam());
 
                 g.setColor(NAME_SHADOW_COLOR);
-                g.drawString(snake.name, (float) (snake.x - g.getFontMetrics().stringWidth(snake.name) / 2.0 + g.getFontMetrics().getHeight() / 12.0), (float) (snake.y - thickness * 2 / 3 - g.getFontMetrics().getHeight() + g.getFontMetrics().getHeight() / 12.0));
-                g.drawString("" + length, (float) (snake.x - g.getFontMetrics().stringWidth("" + length) / 2.0 + g.getFontMetrics().getHeight() / 12.0), (float) (snake.y - thickness * 2 / 3 + g.getFontMetrics().getHeight() / 12.0));
+                g.drawString(snake.name,
+                    (float) (snake.x - g.getFontMetrics().stringWidth(snake.name) / 2.0 + g.getFontMetrics().getHeight() / 12.0),
+                    (float) (snake.y - thickness * 2 / 3 - g.getFontMetrics().getHeight() + g.getFontMetrics().getHeight() / 12.0));
+                g.drawString(lengthText,
+                    (float) (snake.x - g.getFontMetrics().stringWidth(lengthText) / 2.0 + g.getFontMetrics().getHeight() / 12.0),
+                    (float) (snake.y - thickness * 2 / 3 + g.getFontMetrics().getHeight() / 12.0));
 
                 g.setColor(FOREGROUND_COLOR);
                 g.drawString(snake.name, (float) (snake.x - g.getFontMetrics().stringWidth(snake.name) / 2.0), (float) (snake.y - thickness * 2 / 3 - g.getFontMetrics().getHeight()));
-                g.drawString("" + length, (float) (snake.x - g.getFontMetrics().stringWidth("" + length) / 2.0), (float) (snake.y - thickness * 2 / 3));
+                g.drawString(lengthText, (float) (snake.x - g.getFontMetrics().stringWidth(lengthText) / 2.0), (float) (snake.y - thickness * 2 / 3));
             });
             g.setStroke(oldStroke);
 
@@ -223,7 +257,7 @@ final class MySlitherCanvas extends JPanel {
 
             g.setColor(MAP_COLOR);
             g.drawOval(w - 80, h - 80, 79, 79);
-            boolean[] currentMap = map;
+            boolean[] currentMap = map; // TODO: save map in model, set to null on reconnect
             if (currentMap != null) {
                 for (int i = 0; i < currentMap.length; i++) {
                     if (currentMap[i]) {
@@ -245,5 +279,12 @@ final class MySlitherCanvas extends JPanel {
                 g.setStroke(oldStroke);
             }
         }
+
+        g.setFont(DEBUG_FONT);
+        g.setColor(FOREGROUND_COLOR);
+        long newFrameTime = System.currentTimeMillis();
+        fps = 0.95 * fps + 0.05 * 1000.0 / (newFrameTime - lastFrameTime);
+        g.drawString("FPS: " + Math.round(fps), 0, g.getFontMetrics().getAscent());
+        lastFrameTime = newFrameTime;
     }
 }

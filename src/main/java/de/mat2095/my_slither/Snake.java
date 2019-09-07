@@ -11,7 +11,7 @@ class Snake {
     int dir;
     double wang, ang;
     double sp, tsp;
-    double fam;
+    private double fam;
     final Deque<SnakeBodyPart> body;
     private final MySlitherModel model;
 
@@ -48,5 +48,13 @@ class Snake {
 
     boolean isBoosting() {
         return tsp > getFsp();
+    }
+
+    double getFam() {
+        return fam;
+    }
+
+    void setFam(double fam) {
+        this.fam = fam;
     }
 }

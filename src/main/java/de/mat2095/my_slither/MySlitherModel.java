@@ -7,14 +7,15 @@ import java.util.Map;
 
 class MySlitherModel {
 
-    private static final double PI2 = Math.PI * 2;
+    static final double PI2 = Math.PI * 2;
 
     final int gameRadius;
     final int sectorSize;
     final double spangdv;
     final double nsp1, nsp2, nsp3;
     private final double mamu1, mamu2;
-    private final double cst;
+    private final double cst; // TODO: usage?
+    private final int mscps;
     private final double[] fpsls, fmlts;
 
     final Map<Integer, Snake> snakes = new LinkedHashMap<>();
@@ -24,16 +25,11 @@ class MySlitherModel {
 
     private long lastUpdateTime;
 
-    private long lastAngleUpdateTime;
-    private double lastAngleUpdated = -1;
-    private double wAngle = -1;
-    private boolean boost;
     private final MySlitherJFrame view;
-    private final MySlitherWebSocketClient client;
 
     Snake snake;
 
-    MySlitherModel(int gameRadius, int sectorSize, double spangdv, double nsp1, double nsp2, double nsp3, double mamu1, double mamu2, double cst, int mscps, MySlitherJFrame view, MySlitherWebSocketClient client) {
+    MySlitherModel(int gameRadius, int sectorSize, double spangdv, double nsp1, double nsp2, double nsp3, double mamu1, double mamu2, double cst, int mscps, MySlitherJFrame view) {
         this.gameRadius = gameRadius;
         this.sectorSize = sectorSize;
         this.spangdv = spangdv;
@@ -43,31 +39,25 @@ class MySlitherModel {
         this.mamu1 = mamu1;
         this.mamu2 = mamu2;
         this.cst = cst;
+        this.mscps = mscps;
         this.view = view;
-        this.client = client;
+
         sectors = new boolean[gameRadius * 2 / sectorSize][gameRadius * 2 / sectorSize];
 
-        fmlts = new double[mscps + 1 + 2048];
-        fpsls = new double[mscps + 1 + 2048];
-
-        for (int i = 0; i <= mscps; i++) {
-            fmlts[i] = (i >= mscps ? fmlts[i - 1] : Math.pow(1 - 1.0 * i / mscps, 2.25));
-            fpsls[i] = (i == 0 ? 0d : fpsls[i - 1] + 1.0 / fmlts[i - 1]);
-        }
-
-        double fmltsFiller = fmlts[mscps];
-        double fpslsFiller = fpsls[mscps];
-
-        for (int i = 0; i < 2048; i++) {
-            fmlts[mscps + 1 + i] = fmltsFiller;
-            fpsls[mscps + 1 + i] = fpslsFiller;
+        fmlts = new double[mscps + 1];
+        fpsls = new double[mscps + 1];
+        for (int i = 0; i < mscps; i++) {
+            double base = (double) (mscps - i) / mscps;
+            fmlts[i] = 1 / (base * base * Math.sqrt(Math.sqrt(base)));
+            fpsls[i + 1] = fpsls[i] + fmlts[i];
         }
 
         lastUpdateTime = System.currentTimeMillis();
     }
 
     int getSnakeLength(int bodyLength, double fillAmount) {
-        return (int) (15 * (fpsls[bodyLength] + fillAmount / fmlts[bodyLength]) - 20);
+        bodyLength = Math.min(bodyLength, mscps);
+        return (int) (15 * (fpsls[bodyLength] + fillAmount * fmlts[bodyLength]) - 20);
     }
 
     void update() {
@@ -75,17 +65,8 @@ class MySlitherModel {
             long newTime = System.currentTimeMillis();
 
             double deltaTimeWIP = (newTime - lastUpdateTime) / 8.0;
-            deltaTimeWIP = Math.max(deltaTimeWIP, 1.56);
             deltaTimeWIP = Math.min(deltaTimeWIP, 5.0);
             final double deltaTime = deltaTimeWIP;
-
-            if (snake != null && wAngle != lastAngleUpdated && System.currentTimeMillis() - lastAngleUpdateTime > 100) {
-                lastAngleUpdateTime = System.currentTimeMillis();
-                lastAngleUpdated = wAngle;
-                client.sendAngleUpdate(wAngle);
-            }
-
-            view.setLength(snake == null ? 0 : getSnakeLength(snake.body.size(), snake.fam));
 
             snakes.values().forEach(cSnake -> {
 
@@ -145,6 +126,7 @@ class MySlitherModel {
                 cSnake.y += Math.sin(cSnake.ang) * snakeDistance;
             });
 
+            //TODO: eahang
             double preyDeltaAngle = mamu2 * deltaTime;
             preys.values().forEach(prey -> {
                 double preyDistance = prey.sp * deltaTime / 4.0;
@@ -209,21 +191,6 @@ class MySlitherModel {
         }
     }
 
-    void setOwnSnakeWang(double wang) {
-        synchronized (view.modelLock) {
-            wAngle = wang;
-        }
-    }
-
-    void setOwnSnakeBoost(boolean boost) {
-        synchronized (view.modelLock) {
-            if (snake != null && boost != this.boost) {
-                this.boost = boost;
-                client.sendBoostUpdate(boost);
-            }
-        }
-    }
-
     void addPrey(int id, double x, double y, double radius, int dir, double wang, double ang, double sp) {
         synchronized (view.modelLock) {
             preys.put(id, new Prey(x, y, radius, dir, wang, ang, sp));
@@ -240,9 +207,9 @@ class MySlitherModel {
         }
     }
 
-    void addFood(int x, int y, double size) {
+    void addFood(int x, int y, double size, boolean fastSpawn) {
         synchronized (view.modelLock) {
-            foods.put(y * gameRadius * 3 + x, new Food(x, y, size));
+            foods.put(y * gameRadius * 3 + x, new Food(x, y, size, fastSpawn));
         }
     }
 
