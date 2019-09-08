@@ -181,6 +181,9 @@ final class MySlitherCanvas extends JPanel {
 
             model.preys.values().forEach(prey -> {
                 double preyRadius = prey.getRadius();
+                if (preyRadius <= 0) {
+                    return;
+                }
                 g.setPaint(new RadialGradientPaint((float) (prey.x - 0.5 / scale), (float) (prey.y - 0.5 / scale), (float) (preyRadius * 2), PREY_HALO_FRACTIONS, PREY_HALO_COLORS));
                 g.fillRect((int) Math.floor(prey.x - preyRadius * 2 - 1), (int) Math.floor(prey.y - preyRadius * 2 - 1), (int) (preyRadius * 4 + 3), (int) (preyRadius * 4 + 3));
                 g.setColor(PREY_COLOR);
@@ -283,7 +286,9 @@ final class MySlitherCanvas extends JPanel {
         g.setFont(DEBUG_FONT);
         g.setColor(FOREGROUND_COLOR);
         long newFrameTime = System.currentTimeMillis();
-        fps = 0.95 * fps + 0.05 * 1000.0 / (newFrameTime - lastFrameTime);
+        if (newFrameTime > lastFrameTime) {
+            fps = 0.95 * fps + 0.05 * 1000.0 / (newFrameTime - lastFrameTime);
+        }
         g.drawString("FPS: " + Math.round(fps), 0, g.getFontMetrics().getAscent());
         lastFrameTime = newFrameTime;
     }
