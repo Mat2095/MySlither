@@ -704,7 +704,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             BufferedReader i49526_BufferedReader = new BufferedReader(new InputStreamReader(i49526_InputStream));
             i49526_String = i49526_BufferedReader.lines().collect(Collectors.joining("\n"));
         } catch (IOException ex) {
-            throw new Error("Error reading server-list!");
+            throw new Error("Error reading server-list!"); // TODO: set to disconnected
         }
 
         int[] data = new int[(i49526_String.length() - 1) / 2];

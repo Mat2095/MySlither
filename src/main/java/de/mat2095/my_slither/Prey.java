@@ -21,7 +21,7 @@ class Prey {
         this.spawnTime = System.currentTimeMillis();
     }
 
-    public double getRadius() { // TODO: factor?
+    double getRadius() { // TODO: factor?
         double fillRate = (System.currentTimeMillis() - spawnTime) / 1200.0;
         if (fillRate >= 1) {
             return size;

@@ -126,7 +126,7 @@ class MySlitherModel {
                 cSnake.y += Math.sin(cSnake.ang) * snakeDistance;
             });
 
-            //TODO: eahang
+            // TODO: eahang
             double preyDeltaAngle = mamu2 * deltaTime;
             preys.values().forEach(prey -> {
                 double preyDistance = prey.sp * deltaTime / 4.0;

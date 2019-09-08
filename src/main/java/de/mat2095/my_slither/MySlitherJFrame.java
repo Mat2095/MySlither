@@ -10,6 +10,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import javax.swing.*;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 import javax.swing.table.DefaultTableCellRenderer;
 
 
@@ -156,6 +158,21 @@ final class MySlitherJFrame extends JFrame {
                     break;
                 case DISCONNECTING:
                     break;
+            }
+        });
+        connect.addAncestorListener(new AncestorListener() {
+            @Override
+            public void ancestorAdded(AncestorEvent event) {
+                connect.requestFocusInWindow();
+                connect.removeAncestorListener(this);
+            }
+
+            @Override
+            public void ancestorRemoved(AncestorEvent event) {
+            }
+
+            @Override
+            public void ancestorMoved(AncestorEvent event) {
             }
         });
 
