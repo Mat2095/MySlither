@@ -256,6 +256,13 @@ final class MySlitherCanvas extends JPanel {
             });
             g.setStroke(oldStroke);
 
+            view.getPlayer().mapPoints.forEach(point -> {
+                if (point.visible) {
+                    g.setColor(point.color);
+                    g.fill(new Ellipse2D.Double(point.x - point.radius, point.y - point.radius, point.radius * 2, point.radius * 2));
+                }
+            });
+
             g.setTransform(oldTransform);
 
             g.setColor(MAP_COLOR);

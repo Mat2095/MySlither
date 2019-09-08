@@ -6,6 +6,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -87,10 +88,13 @@ final class MySlitherJFrame extends JFrame {
 
     // TODO: skins, prey-size, snake-length/width, bot-layer, that-other-thing(?), show ping
 
+    private final ArrayList<Player> PLAYERS = new ArrayList<>();
+
     private final JTextField server, name;
     private final JComboBox<String> snake;
     private final JCheckBox useRandomServer;
     private final JToggleButton connect;
+    private final JComboBox<String> player;
     private final JLabel rank, kills;
     private final JSplitPane rightSplitPane, fullSplitPane;
     private final JTextArea log;
@@ -103,7 +107,6 @@ final class MySlitherJFrame extends JFrame {
     private Status status;
     private URI[] serverList;
     private MySlitherWebSocketClient client;
-    private final Player player;
     MySlitherModel model;
     final Object modelLock = new Object();
 
@@ -129,7 +132,6 @@ final class MySlitherJFrame extends JFrame {
         getContentPane().setLayout(new BorderLayout());
 
         canvas = new MySlitherCanvas(this);
-        player = canvas.mouseInput;
 
         // === upper row ===
         JPanel settings = new JPanel(new GridBagLayout());
@@ -176,6 +178,13 @@ final class MySlitherJFrame extends JFrame {
             }
         });
 
+        PLAYERS.add(canvas.mouseInput);
+        PLAYERS.addAll(EaterBot.getPlayers());
+
+        player = new JComboBox<>(PLAYERS.stream().map(p -> p.name).toArray(String[]::new));
+        player.setMaximumRowCount(player.getItemCount());
+        player.setSelectedIndex(1);
+
         rank = new JLabel();
 
         kills = new JLabel();
@@ -198,6 +207,10 @@ final class MySlitherJFrame extends JFrame {
             new GridBagConstraints(2, 1, 1, 2, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(new JSeparator(SwingConstants.VERTICAL),
             new GridBagConstraints(3, 0, 1, 3, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 6, 0, 6), 0, 0));
+        settings.add(new JLabel("player:"),
+            new GridBagConstraints(4, 0, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
+        settings.add(player,
+            new GridBagConstraints(5, 0, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(new JLabel("kills:"),
             new GridBagConstraints(4, 1, 1, 1, 0, 0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 2, 2, 2), 0, 0));
         settings.add(kills,
@@ -283,7 +296,7 @@ final class MySlitherJFrame extends JFrame {
                 synchronized (modelLock) {
                     if (status == Status.CONNECTED && model != null) {
                         model.update();
-                        client.sendData(player.action(model));
+                        client.sendData(getPlayer().action(model));
                     }
                 }
             }
@@ -403,6 +416,10 @@ final class MySlitherJFrame extends JFrame {
                 logScrollBar.setValue(logScrollBar.getMaximum() - logScrollBar.getVisibleAmount());
             }
         });
+    }
+
+    Player getPlayer() {
+        return PLAYERS.get(player.getSelectedIndex());
     }
 
     void setModel(MySlitherModel model) {
