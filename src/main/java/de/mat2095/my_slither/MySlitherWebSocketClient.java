@@ -36,6 +36,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     private byte lastAngleContent, angleToBeSent;
     private boolean lastBoostContent;
     private boolean waitingForPong;
+    private static int angleConstant = 16777215;
 
     static {
         HEADER.put("Origin", "http://slither.io");
@@ -345,7 +346,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         int snakeID = (data[3] << 8) | data[4];
         synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
-            snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0);
+            snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / angleConstant);
         }
     }
 
@@ -357,7 +358,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         synchronized (view.modelLock) {
             Snake snake = model.getSnake(snakeID);
             if (data.length == 8) {
-                snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / 16777215.0);
+                snake.setFam(((data[5] << 16) | (data[6] << 8) | (data[7])) / angleConstant);
             }
             snake.body.pollLast();
         }
@@ -383,7 +384,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             double newY = absoluteCoords ? (data[7] << 8) | data[8] : head.y + data[6] - 128;
 
             if (newBodyPart) {
-                snake.setFam(((data[absoluteCoords ? 9 : 7] << 16) | (data[absoluteCoords ? 10 : 8] << 8) | (data[absoluteCoords ? 11 : 9])) / 16777215.0);
+                snake.setFam(((data[absoluteCoords ? 9 : 7] << 16) | (data[absoluteCoords ? 10 : 8] << 8) | (data[absoluteCoords ? 11 : 9])) / angleConstant);
             } else {
                 snake.body.pollLast();
             }
@@ -410,7 +411,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         int cursorPosition = 8;
         while (cursorPosition + 6 < data.length) {
             int bodyLength = (data[cursorPosition] << 8) | data[cursorPosition + 1];
-            double fillAnount = ((data[cursorPosition + 2] << 16) | (data[cursorPosition + 3] << 8) | (data[cursorPosition + 4])) / 16777215.0;
+            double fillAnount = ((data[cursorPosition + 2] << 16) | (data[cursorPosition + 3] << 8) | (data[cursorPosition + 4])) / angleConstant;
             int nameLength = data[cursorPosition + 6];
             StringBuilder name = new StringBuilder(nameLength);
             for (int i = 0; i < nameLength && cursorPosition + 7 + i < data.length; i++) {
@@ -474,16 +475,19 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
 
         int bodyLength = (data[3] << 16) | (data[4] << 8) | (data[5]);
-        double fillAmount = ((data[6] << 16) | (data[7] << 8) | (data[8])) / 16777215.0;
+        double fillAmount = ((data[6] << 16) | (data[7] << 8) | (data[8])) / angleConstant;
         int nameLength = data[9];
         StringBuilder name = new StringBuilder(nameLength);
+
         for (int i = 0; i < nameLength; i++) {
             name.append((char) data[10 + i]);
         }
+
         StringBuilder message = new StringBuilder();
         for (int i = 0; i < data.length - 10 - nameLength; i++) {
             message.append((char) data[10 + nameLength + i]);
         }
+        
         view.log("Received Highscore of the day: " + name.toString() + " (" + model.getSnakeLength(bodyLength, fillAmount) + "): " + message.toString());
     }
 
@@ -526,11 +530,11 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         if (data.length >= 31) {
             int id = (data[3] << 8) | (data[4]);
 
-            double ang = ((data[5] << 16) | (data[6] << 8) | data[7]) * PI2 / 16777215.0;
-            double wang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215.0;
+            double ang = ((data[5] << 16) | (data[6] << 8) | data[7]) * PI2 / angleConstant;
+            double wang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / angleConstant;
 
             double sp = ((data[12] << 8) | data[13]) / 1000.0;
-            double fam = ((data[14] << 16) | (data[15] << 8) | data[16]) / 16777215.0;
+            double fam = ((data[14] << 16) | (data[15] << 8) | data[16]) / angleConstant;
 
             double x = ((data[18] << 16) | (data[19] << 8) | data[20]) / 5.0;
             double y = ((data[21] << 16) | (data[22] << 8) | data[23]) / 5.0;
@@ -590,7 +594,8 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     }
 
     private void processUpdatePrey(int[] data) {
-        if (data.length != 11 && data.length != 12 && data.length != 13 && data.length != 14 && data.length != 15 && data.length != 16 && data.length != 18) {
+
+        if (!(data.length >= 11) && !(data.length <= 18)){
             view.log("update prey wrong length!");
             return;
         }
@@ -609,30 +614,30 @@ final class MySlitherWebSocketClient extends WebSocketClient {
                     prey.sp = ((data[9] << 8) | data[10]) / 1000.0;
                     break;
                 case 12:
-                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
+                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / angleConstant;
                     break;
                 case 13:
                     prey.dir = data[9] - 48;
-                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / angleConstant;
                     break;
                 case 14:
-                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / 16777215;
+                    prey.ang = ((data[9] << 16) | (data[10] << 8) | data[11]) * PI2 / angleConstant;
                     prey.sp = ((data[12] << 8) | data[13]) / 1000.0;
                     break;
                 case 15:
                     prey.dir = data[9] - 48;
-                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
+                    prey.wang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / angleConstant;
                     prey.sp = ((data[13] << 8) | data[14]) / 1000.0;
                     break;
                 case 16:
                     prey.dir = data[9] - 48;
-                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
+                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / angleConstant;
+                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / angleConstant;
                     break;
                 case 18:
                     prey.dir = data[9] - 48;
-                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / 16777215;
-                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / 16777215;
+                    prey.ang = ((data[10] << 16) | (data[11] << 8) | data[12]) * PI2 / angleConstant;
+                    prey.wang = ((data[13] << 16) | (data[14] << 8) | data[15]) * PI2 / angleConstant;
                     prey.sp = ((data[16] << 8) | data[17]) / 1000.0;
                     break;
             }
@@ -653,8 +658,8 @@ final class MySlitherWebSocketClient extends WebSocketClient {
             double y = ((data[9] << 16) | (data[10] << 8) | data[11]) / 5.0;
             double radius = data[12] / 5.0;
             int dir = data[13] - 48;
-            double wang = ((data[14] << 16) | (data[15] << 8) | data[16]) * PI2 / 16777215;
-            double ang = ((data[17] << 16) | (data[18] << 8) | data[19]) * PI2 / 16777215;
+            double wang = ((data[14] << 16) | (data[15] << 8) | data[16]) * PI2 / angleConstant;
+            double ang = ((data[17] << 16) | (data[18] << 8) | data[19]) * PI2 / angleConstant;
             double sp = ((data[20] << 8) | data[21]) / 1000.0;
             model.addPrey(id, x, y, radius, dir, wang, ang, sp);
         } else {
