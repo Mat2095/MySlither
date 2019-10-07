@@ -254,7 +254,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     }
 
     private void processUpdateBodyparts(int[] data, char cmd) {
-        if (data.length != 8 && data.length != 7 && data.length != 6) {
+        if ( !(data.length >= 6) && !(data.length <= 8) ) {
             view.log("update body-parts wrong length!");
             return;
         }
@@ -264,36 +264,40 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         double newAng = -1;
         double newWang = -1;
         double newSpeed = -1;
+
         if (data.length == 8) {
             newDir = cmd == 'e' ? 1 : 2;
-            newAng = data[5] * PI2 / 256;
-            newWang = data[6] * PI2 / 256;
-            newSpeed = data[7] / 18.0;
+
+            newAng = getNewAngle(data[5]);
+            newWang = getNewAngle(data[6]);
+
+            newSpeed = getNewSpeed(data[7]);
+
         } else if (data.length == 7) {
             switch (cmd) {
                 case 'e':
-                    newAng = data[5] * PI2 / 256;
-                    newSpeed = data[6] / 18.0;
+                    newAng = getNewAngle(data[5]);
+                    newSpeed = getNewSpeed(data[6]);
                     break;
                 case 'E':
                     newDir = 1;
-                    newWang = data[5] * PI2 / 256;
-                    newSpeed = data[6] / 18.0;
+                    newWang = getNewAngle(data[5]);
+                    newSpeed = getNewSpeed(data[6]);
                     break;
                 case '4':
                     newDir = 2;
-                    newWang = data[5] * PI2 / 256;
-                    newSpeed = data[6] / 18.0;
+                    newWang = getNewAngle(data[5]);
+                    newSpeed = getNewSpeed(data[6]);
                     break;
                 case '3':
                     newDir = 1;
-                    newAng = data[5] * PI2 / 256;
-                    newWang = data[6] * PI2 / 256;
+                    newAng = getNewAngle(data[5]);
+                    newWang = getNewAngle(data[6]);
                     break;
                 case '5':
                     newDir = 2;
-                    newAng = data[5] * PI2 / 256;
-                    newWang = data[6] * PI2 / 256;
+                    newAng = getNewAngle(data[5]);
+                    newWang = getNewAngle(data[6]);
                     break;
                 default:
                     view.log("update body-parts invalid cmd/length: " + cmd + ", " + data.length);
@@ -302,18 +306,18 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         } else if (data.length == 6) {
             switch (cmd) {
                 case 'e':
-                    newAng = data[5] * PI2 / 256;
+                    newAng = getNewAngle(data[5]);
                     break;
                 case 'E':
                     newDir = 1;
-                    newWang = data[5] * PI2 / 256;
+                    newWang = getNewAngle(data[5]);
                     break;
                 case '4':
                     newDir = 2;
-                    newWang = data[5] * PI2 / 256;
+                    newWang = getNewAngle(data[5]);
                     break;
                 case '3':
-                    newSpeed = data[5] / 18.0;
+                    newSpeed = getNewSpeed(data[5]);
                     break;
                 default:
                     view.log("update body-parts invalid cmd/length: " + cmd + ", " + data.length);
@@ -336,6 +340,14 @@ final class MySlitherWebSocketClient extends WebSocketClient {
                 snake.sp = newSpeed;
             }
         }
+    }
+
+    private double getNewAngle(int angle){
+        return angle * PI2 / 256;
+    }
+
+    private double getNewSpeed(int speed){
+        return speed / 18.0;
     }
 
     private void processUpdateFam(int[] data) {
@@ -487,7 +499,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         for (int i = 0; i < data.length - 10 - nameLength; i++) {
             message.append((char) data[10 + nameLength + i]);
         }
-        
+
         view.log("Received Highscore of the day: " + name.toString() + " (" + model.getSnakeLength(bodyLength, fillAmount) + "): " + message.toString());
     }
 
