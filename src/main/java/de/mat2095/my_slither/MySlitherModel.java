@@ -4,7 +4,6 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-
 class MySlitherModel {
 
     static final double PI2 = Math.PI * 2;
@@ -29,7 +28,8 @@ class MySlitherModel {
 
     Snake snake;
 
-    MySlitherModel(int gameRadius, int sectorSize, double spangdv, double nsp1, double nsp2, double nsp3, double mamu1, double mamu2, double cst, int mscps, MySlitherJFrame view) {
+    MySlitherModel(int gameRadius, int sectorSize, double spangdv, double nsp1, double nsp2, double nsp3, double mamu1,
+            double mamu2, double cst, int mscps, MySlitherJFrame view) {
         this.gameRadius = gameRadius;
         this.sectorSize = sectorSize;
         this.spangdv = spangdv;
@@ -46,6 +46,7 @@ class MySlitherModel {
 
         fmlts = new double[mscps + 1];
         fpsls = new double[mscps + 1];
+
         for (int i = 0; i < mscps; i++) {
             double base = (double) (mscps - i) / mscps;
             fmlts[i] = 1 / (base * base * Math.sqrt(Math.sqrt(base)));
@@ -72,6 +73,7 @@ class MySlitherModel {
 
                 double snakeDeltaAngle = mamu1 * deltaTime * cSnake.getScang() * cSnake.getSpang();
                 double snakeDistance = cSnake.sp * deltaTime / 4.0;
+
                 if (snakeDistance > 42) {
                     snakeDistance = 42;
                 }
@@ -90,37 +92,10 @@ class MySlitherModel {
                     }
                 }
 
-                if (cSnake.dir == 1) {
-                    cSnake.ang -= snakeDeltaAngle;
-                    cSnake.ang %= PI2;
-                    if (cSnake.ang < 0) {
-                        cSnake.ang += PI2;
-                    }
-                    double angle2go = (cSnake.wang - cSnake.ang) % PI2;
-                    if (angle2go < 0) {
-                        angle2go += PI2;
-                    }
-                    if (angle2go <= Math.PI) {
-                        cSnake.ang = cSnake.wang;
-                        cSnake.dir = 0;
-                    }
-                } else if (cSnake.dir == 2) {
-                    cSnake.ang += snakeDeltaAngle;
-                    cSnake.ang %= PI2;
-                    if (cSnake.ang < 0) {
-                        cSnake.ang += PI2;
-                    }
-                    double angle2go = (cSnake.wang - cSnake.ang) % PI2;
-                    if (angle2go < 0) {
-                        angle2go += PI2;
-                    }
-                    if (angle2go > Math.PI) {
-                        cSnake.ang = cSnake.wang;
-                        cSnake.dir = 0;
-                    }
-                } else {
+                if (cSnake.dir != 1 || cSnake.dir != 2)
                     cSnake.ang = cSnake.wang;
-                }
+                else 
+                    cSnake = angleToTake(cSnake, snakeDeltaAngle);
 
                 cSnake.x += Math.cos(cSnake.ang) * snakeDistance;
                 cSnake.y += Math.sin(cSnake.ang) * snakeDistance;
@@ -134,31 +109,39 @@ class MySlitherModel {
                 if (prey.dir == 1) {
                     prey.ang -= preyDeltaAngle;
                     prey.ang %= PI2;
+
                     if (prey.ang < 0) {
                         prey.ang += PI2;
                     }
+
                     double angle2go = (prey.wang - prey.ang) % PI2;
                     if (angle2go < 0) {
                         angle2go += PI2;
                     }
+
                     if (angle2go <= Math.PI) {
                         prey.ang = prey.wang;
                         prey.dir = 0;
                     }
+
                 } else if (prey.dir == 2) {
                     prey.ang += preyDeltaAngle;
                     prey.ang %= PI2;
+
                     if (prey.ang < 0) {
                         prey.ang += PI2;
                     }
+
                     double angle2go = (prey.wang - prey.ang) % PI2;
                     if (angle2go < 0) {
                         angle2go += PI2;
                     }
+
                     if (angle2go > Math.PI) {
                         prey.ang = prey.wang;
                         prey.dir = 0;
                     }
+
                 } else {
                     prey.ang = prey.wang;
                 }
@@ -171,7 +154,37 @@ class MySlitherModel {
         }
     }
 
-    void addSnake(int snakeID, String name, double x, double y, double wang, double ang, double sp, double fam, Deque<SnakeBodyPart> body) {
+    private Snake angleToTake(Snake cSnake, double snakeDeltaAngle) {
+
+        if (cSnake.dir == 1)
+            cSnake.ang -= snakeDeltaAngle;
+        else
+            cSnake.ang += snakeDeltaAngle;
+
+        cSnake.ang %= PI2;
+
+        if (cSnake.ang < 0) {
+            cSnake.ang += PI2;
+        }
+
+        double angle2go = (cSnake.wang - cSnake.ang) % PI2;
+        boolean b;
+
+        if (cSnake.dir == 1)
+            b = angle2go <= Math.PI;
+        else
+            b = angle2go > Math.PI;
+
+        if (b) {
+            cSnake.ang = cSnake.wang;
+            cSnake.dir = 0;
+        }
+
+        return cSnake;
+    }
+
+    void addSnake(int snakeID, String name, double x, double y, double wang, double ang, double sp, double fam,
+            Deque<SnakeBodyPart> body) {
         synchronized (view.modelLock) {
             Snake newSnake = new Snake(snakeID, name, x, y, wang, ang, sp, fam, body, this);
             if (snake == null) {
