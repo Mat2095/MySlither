@@ -95,7 +95,7 @@ class MySlitherModel {
                 if (cSnake.dir != 1 || cSnake.dir != 2)
                     cSnake.ang = cSnake.wang;
                 else 
-                    cSnake = angleToTake(cSnake, snakeDeltaAngle);
+                    cSnake = snakeAngleToTake(cSnake, snakeDeltaAngle);
 
                 cSnake.x += Math.cos(cSnake.ang) * snakeDistance;
                 cSnake.y += Math.sin(cSnake.ang) * snakeDistance;
@@ -105,46 +105,11 @@ class MySlitherModel {
             double preyDeltaAngle = mamu2 * deltaTime;
             preys.values().forEach(prey -> {
                 double preyDistance = prey.sp * deltaTime / 4.0;
-
-                if (prey.dir == 1) {
-                    prey.ang -= preyDeltaAngle;
-                    prey.ang %= PI2;
-
-                    if (prey.ang < 0) {
-                        prey.ang += PI2;
-                    }
-
-                    double angle2go = (prey.wang - prey.ang) % PI2;
-                    if (angle2go < 0) {
-                        angle2go += PI2;
-                    }
-
-                    if (angle2go <= Math.PI) {
-                        prey.ang = prey.wang;
-                        prey.dir = 0;
-                    }
-
-                } else if (prey.dir == 2) {
-                    prey.ang += preyDeltaAngle;
-                    prey.ang %= PI2;
-
-                    if (prey.ang < 0) {
-                        prey.ang += PI2;
-                    }
-
-                    double angle2go = (prey.wang - prey.ang) % PI2;
-                    if (angle2go < 0) {
-                        angle2go += PI2;
-                    }
-
-                    if (angle2go > Math.PI) {
-                        prey.ang = prey.wang;
-                        prey.dir = 0;
-                    }
-
-                } else {
+                
+                if (prey.dir != 1 || prey.dir != 2)
                     prey.ang = prey.wang;
-                }
+                else 
+                    prey = preyAngleToTake(prey, preyDeltaAngle);
 
                 prey.x += Math.cos(prey.ang) * preyDistance;
                 prey.y += Math.sin(prey.ang) * preyDistance;
@@ -154,7 +119,8 @@ class MySlitherModel {
         }
     }
 
-    private Snake angleToTake(Snake cSnake, double snakeDeltaAngle) {
+    // TODO: ? Have snake and prey inherit from class to eliminate need for seperate functions
+    private Snake snakeAngleToTake(Snake cSnake, double snakeDeltaAngle) {
 
         if (cSnake.dir == 1)
             cSnake.ang -= snakeDeltaAngle;
@@ -168,12 +134,12 @@ class MySlitherModel {
         }
 
         double angle2go = (cSnake.wang - cSnake.ang) % PI2;
+        
         boolean b;
-
         if (cSnake.dir == 1)
-            b = angle2go <= Math.PI;
+            b = angle2go <= Math.PI ? true : false;
         else
-            b = angle2go > Math.PI;
+            b = angle2go > Math.PI ? true : false;
 
         if (b) {
             cSnake.ang = cSnake.wang;
@@ -182,6 +148,38 @@ class MySlitherModel {
 
         return cSnake;
     }
+
+    private Prey preyAngleToTake(Prey prey, double preyDeltaAngle) {
+              
+        if (prey.dir == 1) 
+            prey.ang -= preyDeltaAngle;
+        else 
+            prey.ang += preyDeltaAngle;
+            
+        prey.ang %= PI2;
+
+            if (prey.ang < 0) {
+                prey.ang += PI2;
+            }
+
+            double angle2go = (prey.wang - prey.ang) % PI2;
+            if (angle2go < 0) {
+                angle2go += PI2;
+            }
+
+            boolean b;
+            if (prey.dir == 1)
+                b = angle2go <= Math.PI ? true : false;
+            else
+                b = angle2go > Math.PI ? true : false;
+            
+            if (b) {
+                prey.ang = prey.wang;
+                prey.dir = 0;
+            }
+            return prey;
+    }
+
 
     void addSnake(int snakeID, String name, double x, double y, double wang, double ang, double sp, double fam,
             Deque<SnakeBodyPart> body) {
