@@ -254,7 +254,7 @@ final class MySlitherWebSocketClient extends WebSocketClient {
     }
 
     private void processUpdateBodyparts(int[] data, char cmd) {
-        if (data.length != 8 && data.length != 7 && data.length != 6)  {
+        if (data.length != 8 && data.length != 7 && data.length != 6) {
             view.log("update body-parts wrong length!");
             return;
         }
@@ -342,11 +342,11 @@ final class MySlitherWebSocketClient extends WebSocketClient {
         }
     }
 
-    private double getNewAngle(int angle){
+    private double getNewAngle(int angle) {
         return angle * PI2 / 256;
     }
 
-    private double getNewSpeed(int speed){
+    private double getNewSpeed(int speed) {
         return speed / 18.0;
     }
 
