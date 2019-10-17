@@ -115,8 +115,11 @@ final class MySlitherCanvas extends JPanel {
             }
         });
 
+        GraphicsEnvironment localGraphicsEnvironment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        int refreshRate = localGraphicsEnvironment.getDefaultScreenDevice().getDisplayMode().getRefreshRate();
+        long repaintDelay = 1000000000 / (refreshRate != DisplayMode.REFRESH_RATE_UNKNOWN ? refreshRate : 60);
         repaintThread = Executors.newSingleThreadScheduledExecutor();
-        repaintThread.scheduleAtFixedRate(this::repaint, 1, 16666666, TimeUnit.NANOSECONDS); // 60 FPS
+        repaintThread.scheduleAtFixedRate(this::repaint, 1, repaintDelay, TimeUnit.NANOSECONDS);
     }
 
     void setMap(boolean[] map) {
