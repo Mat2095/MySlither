@@ -1,7 +1,7 @@
 plugins {
     id "java"
     id "application"
-    id "com.github.johnrengelman.shadow" version "5.1.0"
+    id "com.github.johnrengelman.shadow" version "5.2.0"
 }
 
 sourceCompatibility = 1.8
@@ -15,14 +15,14 @@ mainClassName = "de.mat2095.my_slither.Main"
 repositories {
     mavenCentral()
     maven {
-        url "http://repo.spring.io/plugins-release/"
+        url "https://repo.spring.io/plugins-release/"
     }
 }
 
 dependencies {
-    runtime "com.bulenkov:darcula:2018.2"
-    compile "org.java-websocket:Java-WebSocket:1.4.0"
-    runtime "org.slf4j:slf4j-simple:1.7.28"
+    runtimeOnly "com.bulenkov:darcula:2018.2"
+    implementation "org.java-websocket:Java-WebSocket:1.4.0"
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.28"
 }
 
 
